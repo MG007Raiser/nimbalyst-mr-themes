@@ -124,6 +124,11 @@ assert.ok(members('power-level').every((t: any) => contrastRatio(t.colors.primar
 const sigFam = C.normalizeFamily({ name: 'S', generator: { dominant: 'blue', pops: ['red'], neutral: 'gray', signature: { primary: '#123456', pops: ['#ff0000', 'nope', '#00ff00'], night: 'bad', day: '#eeeeee' } } });
 assert.deepEqual(sigFam.generator?.signature, { primary: '#123456', day: '#eeeeee', pops: ['#ff0000', '', '#00ff00'] }); ok('signature: family files keep valid colors and slot positions');
 assert.equal(C.generateFamilyThemes(sigFam).flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('signature: an imported signature family passes the audit');
+const { toHsl } = await import('../src/fromImage');
+const plSide = PRESETS.find((p: any) => p.id === 'power-level-light-juicy')!.colors['bg-secondary'];
+assert.ok(toHsl(plSide).s > 0.3 && Math.abs(toHsl(plSide).h - toHsl('#f26b1d').h) < 15); ok('signature light: sidebars carry a wash of the accent');
+assert.ok(members('mecha').concat(members('power-level')).filter((t: any) => !t.isDark).every((t: any) => ['bg', 'bg-secondary', 'bg-tertiary'].every((k) => contrastRatio(t.colors.text, t.colors[k]) >= 7))); ok('signature light: text still reads 7:1 on every washed surface');
+
 // family from an image
 const { paletteFromPixels, familyFromPalette, nearestHue } = await import('../src/fromImage');
 const img = (parts: [string, number][]) => {

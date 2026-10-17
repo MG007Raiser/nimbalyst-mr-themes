@@ -247,14 +247,21 @@ function character(f: FamilySpec, dark: boolean, v: Variation): Character {
     ch.border = mix(ch.border, mix(night, WHITE, 0.18), k);
     ch.active = mix(ch.active, mix(night, WHITE, 0.22), k);
   }
-  if (!dark && sig?.day) {
-    const k = { subtle: 0.5, pigment: 0.8, juicy: 0.6 }[v];
-    const day = sig.day;
-    ch.bg = mix(ch.bg, day, k);
-    ch.bg2 = mix(ch.bg2, mix(day, BLACK, 0.04), k);
-    ch.bg3 = mix(ch.bg3, mix(day, BLACK, 0.08), k);
-    ch.border = mix(ch.border, mix(day, BLACK, 0.15), k);
-    ch.active = mix(ch.active, mix(day, BLACK, 0.12), k);
+  if (!dark && sig && (sig.day || sig.primary)) {
+    // On light surfaces the accent must darken to stay readable, so the identity moves into
+    // the surfaces instead: the page takes the day color (or a pale wash of the accent), and
+    // sidebars, panels and active rows take deeper washes of the accent and the first pop.
+    // Text is verified against every surface afterwards, as always.
+    const accent = sig.primary ?? tw(f.dominant, 500);
+    const second = sig.pops?.find(Boolean) ?? accent;
+    const day = sig.day ?? mix(accent, WHITE, 0.9);
+    const wash = { subtle: 0.86, pigment: 0.8, juicy: 0.76 }[v];
+    ch.bg = mix(ch.bg, day, { subtle: 0.7, pigment: 0.9, juicy: 0.55 }[v]);
+    ch.bg2 = mix(ch.bg2, mix(accent, WHITE, wash), { subtle: 0.6, pigment: 0.8, juicy: 0.9 }[v]);
+    ch.bg3 = mix(ch.bg3, mix(second, WHITE, wash - 0.06), { subtle: 0.5, pigment: 0.7, juicy: 0.8 }[v]);
+    ch.border = mix(ch.border, mix(accent, WHITE, 0.6), 0.5);
+    ch.active = mix(ch.active, mix(accent, WHITE, 0.62), 0.7);
+    ch.selectedAlpha += 0.06;
   }
   if (f.contrast === 'high') {
     // Push the surfaces toward the end of the ladder, then draw borders and hovers that hold up.
