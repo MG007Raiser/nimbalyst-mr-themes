@@ -43,6 +43,15 @@ This is the MG007Raiser fork. It keeps the original extension id, so your collec
 - Families added in an update arrive in your collection once, without bringing back families you deleted.
 - The Family Builder Kit CLI runs on Windows and takes `--paper <hue>` and `--contrast high`.
 
+| | |
+|---|---|
+| <img alt="Cycling through the Mecha family live from the editor, with the family, all and favorites scopes" src="screenshots/v0.7.0/cycle-themes.png"> | <img alt="Family from image: a picture, its palette, and the six themes it becomes" src="screenshots/v0.7.0/family-from-image.png"> |
+| Flip through themes live | Family from image |
+| <img alt="Remix: the Power Level colors in new roles, one remix theme shown live" src="screenshots/v0.7.0/remix.png"> | <img alt="Select mode: seven themes selected, ready to delete together" src="screenshots/v0.7.0/select-and-delete.png"> |
+| Remix a family | Select and delete several themes |
+| <img alt="Mecha Dark Juicy in the theme preview: navy cockpit, red, yellow and blue" src="screenshots/v0.7.0/mecha-dark.png"> | <img alt="Power Level Light Pigment in the theme preview: orange sidebars on a sky-blue page" src="screenshots/v0.7.0/power-level-light.png"> |
+| Mecha, dark | Power Level, light |
+
 Goes well with [Mr. Projects](https://github.com/Firework-Labs/nimbalyst-mr-projects).
 
 ## Good to know
