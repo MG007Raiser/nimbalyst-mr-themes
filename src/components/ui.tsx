@@ -38,9 +38,9 @@ export function Toggle({ on, onChange, title }: { on: boolean; onChange: (v: boo
   );
 }
 
-export function Pill({ on, children, onClick }: { on?: boolean; children: ReactNode; onClick?: () => void }) {
+export function Pill({ on, children, onClick, title }: { on?: boolean; children: ReactNode; onClick?: () => void; title?: string }) {
   return (
-    <button type="button" className={`nte-pill${on ? ' on' : ''}`} onClick={onClick}>
+    <button type="button" className={`nte-pill${on ? ' on' : ''}`} onClick={onClick} title={title}>
       {children}
     </button>
   );

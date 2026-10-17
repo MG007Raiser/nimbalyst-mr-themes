@@ -16,15 +16,15 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { copyToClipboard, type PanelHostProps } from '@nimbalyst/extension-sdk';
 import { applier } from '../applier';
 import {
-  FAMILY_SWATCH_COUNT, deleteFamilyFrom, familyHeaderColors, importInto, missingBuiltins, parseFamilyImport, parseThemeImport, restoreBuiltinsInto,
-  saveFamilyInto, serializeFamilyFile, setThemeFamily, suggestedSwatches, uniqueSlug,
-  type FamilyForm, type ImportPayload, type ThemeFamily,
+  FAMILY_SWATCH_COUNT, cycleList, deleteFamilyFrom, familyHeaderColors, importInto, missingBuiltins, parseFamilyImport, parseThemeImport, restoreBuiltinsInto,
+  saveFamilyInto, serializeFamilyFile, setThemeFamily, stepTheme, suggestedSwatches, uniqueSlug,
+  type CycleScope, type FamilyForm, type ImportPayload, type ThemeFamily,
 } from '../collection';
 import { isValidColor, toHex, parseColor } from '../color';
 import { KIT_DIR, KIT_FILES } from '../kit';
 import { LEGACY_PRESET_IDS, isPresetId } from '../presets';
 import { getProjectBridge, type ProjectInfo, type ProjectThemeBridge } from '../projectBridge';
-import { getCollection, getExtensionContext, getFamilies, setCollection, toast } from '../store';
+import { getCollection, getExtensionContext, getFamilies, getFavorites, setCollection, setFavorites, toast } from '../store';
 import { ensureStyles } from '../styles';
 import { themeIconSvg } from '../themeIcon';
 import {
@@ -109,9 +109,19 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   const [tryLive, setTryLive] = useState(false);
   const [bridge, setBridge] = useState<ProjectThemeBridge | null>(() => getProjectBridge());
   const [projects, setProjects] = useState<ProjectInfo[]>(() => getProjectBridge()?.listProjects() ?? []);
+  const [favorites, setFavs] = useState<string[]>(() => getFavorites());
+  const favRef = useRef(favorites);
+  const [cycleScope, setCycleScope] = useState<CycleScope>('family');
+  /** The edit view's keyboard handler, refreshed every render so it sees current state. */
+  const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
 
   useEffect(() => applier.subscribe(setApplierState), []);
   useEffect(() => () => applier.setPreview(null), []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => keyRef.current(e);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   // The project bridge may arrive after we mount (extension load order), so poll briefly and subscribe once found.
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -376,6 +386,40 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
     applier.setPreview(on && view.kind === 'edit' ? view.theme : null);
   };
 
+  const favSet = new Set(favorites);
+  // Toggles read the ref, not this render's list, so quick successive clicks all land.
+  favRef.current = favorites;
+  const toggleFavorite = (t: ThemeFile) => {
+    const cur = favRef.current;
+    const next = cur.includes(t.id) ? cur.filter((id) => id !== t.id) : [...cur, t.id];
+    favRef.current = next;
+    setFavs(next);
+    void setFavorites(next);
+  };
+
+  /** Previous/next theme in the cycle scope, shown live across the app so it can be judged in place. */
+  const step = (delta: number) => {
+    if (view.kind !== 'edit' || view.dirty || view.isNew) return;
+    const next = stepTheme(cycleList(themes, cycleScope, view.theme, favorites), view.theme.id, delta);
+    if (!next || next.id === view.theme.id) return;
+    setView({ kind: 'edit', theme: next, dirty: false, isNew: false });
+    setTryLive(true);
+    applier.setPreview(next);
+  };
+
+  keyRef.current = (e: KeyboardEvent) => {
+    if (view.kind !== 'edit' || modal || e.altKey || e.ctrlKey || e.metaKey) return;
+    const el = e.target as HTMLElement | null;
+    if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      step(e.key === 'ArrowLeft' ? -1 : 1);
+    } else if (e.key === 'Escape' && tryLive) {
+      e.preventDefault();
+      onTryLive(false);
+    }
+  };
+
   const exportModal = modal?.kind === 'export' ? (
     <ExportModal
       title={`Export "${modal.theme.name}"`}
@@ -398,6 +442,17 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   if (view.kind === 'edit') {
     const t = view.theme;
     const fam = familyOfTheme(t);
+    const ring = cycleList(themes, cycleScope, t, favorites);
+    const pos = ring.findIndex((x) => x.id === t.id);
+    const canCycle = !view.dirty && !view.isNew && ring.length > 1;
+    const cycleTip = view.isNew || view.dirty
+      ? 'Save or cancel your changes to cycle through themes'
+      : 'Shown live across the app (← and → keys work too). Esc turns the live preview off; Use globally keeps the theme.';
+    const scopes: { id: CycleScope; label: string; title: string }[] = [
+      { id: 'family', label: fam ? fam.name : 'Family', title: fam ? `Cycle through the ${fam.name} family` : 'This theme has no family; cycles through all themes' },
+      { id: 'all', label: 'All', title: 'Cycle through every theme in the collection' },
+      { id: 'favorites', label: 'Favorites', title: favorites.length ? 'Cycle through your favorites' : 'Star themes to cycle through them here' },
+    ];
     return (
       <div className="nte" data-testid="theme-library-edit">
         <ThemeEditorView
@@ -419,6 +474,25 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
               <button type="button" onClick={backToGallery}>Theme Gallery</button>
               <span>›</span>
               <span>{t.name}</span>
+              {!view.isNew ? (
+                <button
+                  type="button"
+                  className={`nte-star${favSet.has(t.id) ? ' on' : ''}`}
+                  onClick={() => toggleFavorite(t)}
+                  aria-pressed={favSet.has(t.id)}
+                  title={favSet.has(t.id) ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Icon name={favSet.has(t.id) ? 'star' : 'star_border'} size={16} />
+                </button>
+              ) : null}
+              <span className="nte-cycle" data-testid="theme-cycler" title={cycleTip}>
+                <Button variant="ghost" size="sm" icon="chevron_left" disabled={!canCycle} onClick={() => step(-1)} aria-label="Previous theme" />
+                <span className="pos">{pos + 1} / {ring.length}</span>
+                <Button variant="ghost" size="sm" icon="chevron_right" disabled={!canCycle} onClick={() => step(1)} aria-label="Next theme" />
+                {scopes.map((s) => (
+                  <Pill key={s.id} on={cycleScope === s.id} onClick={() => setCycleScope(s.id)} title={s.title}>{s.label}</Pill>
+                ))}
+              </span>
             </div>
           }
           actions={
@@ -478,6 +552,7 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
     }
     menu.push(
       { kind: 'sep' },
+      { label: favSet.has(t.id) ? 'Remove from favorites' : 'Add to favorites', icon: favSet.has(t.id) ? 'star' : 'star_border', onSelect: () => toggleFavorite(t) },
       { label: 'Edit', icon: 'edit', onSelect: () => openEdit(t) },
       { label: 'Duplicate', icon: 'content_copy', onSelect: () => duplicate(t) },
       { label: 'Export…', icon: 'ios_share', onSelect: () => setModal({ kind: 'export', theme: t }) },
@@ -493,6 +568,19 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
               {t.name}
               <small>{t.faction && t.variation ? `${t.faction} · ${t.variation}` : `${t.isDark ? 'dark' : 'light'}${isPresetId(t.id) ? '' : ' · yours'}`}</small>
             </div>
+            <button
+              type="button"
+              className={`nte-star${favSet.has(t.id) ? ' on' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(t);
+              }}
+              aria-pressed={favSet.has(t.id)}
+              aria-label={favSet.has(t.id) ? `Remove ${t.name} from favorites` : `Add ${t.name} to favorites`}
+              title={favSet.has(t.id) ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Icon name={favSet.has(t.id) ? 'star' : 'star_border'} size={16} />
+            </button>
             <MenuButton items={menu} ariaLabel={`Actions for ${t.name}`} title="Use, add to a family, duplicate, export, delete" />
           </div>
           <div className="nte-chips">
@@ -518,6 +606,8 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   };
 
   const familyCount = families.length;
+  // In starring order; ids of deleted themes simply drop out.
+  const favoriteThemes = favorites.map((id) => byId.get(id)).filter((t): t is ThemeFile => !!t);
 
   return (
     <div className="nte" data-testid="theme-library" style={{ position: 'relative' }}>
@@ -572,6 +662,16 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
         </div>
 
         <div className="nte-libbody">
+          {favoriteThemes.length ? (
+            <section data-section="favorites">
+              <SectionHead
+                title="Favorites"
+                hint="Themes you starred. Open one and use the arrows to flip through them live."
+                right={`${favoriteThemes.length} theme${favoriteThemes.length === 1 ? '' : 's'}`}
+              />
+              <div className="nte-grid">{favoriteThemes.map(renderCard)}</div>
+            </section>
+          ) : null}
           <section data-section="collection">
             <SectionHead
               title="Theme Collection"

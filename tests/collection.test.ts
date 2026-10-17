@@ -104,4 +104,17 @@ const { contrastRatio } = await import('../src/color');
 assert.ok(members('beacon').every((t: any) => contrastRatio(t.colors.text, t.colors.bg) >= 10 && contrastRatio(t.colors.primary, t.colors.bg) >= 7 && contrastRatio(t.colors.border, t.colors.bg) >= 3)); ok('high contrast: text 10:1, accent 7:1, borders 3:1');
 assert.equal(C.normalizeFamily({ name: 'B', generator: { dominant: 'blue', pops: [], neutral: 'gray', paper: 'amber', contrast: 'high' } }).generator?.contrast, 'high'); ok('family files carry paper and contrast');
 assert.equal(PRESETS.flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('all 120 presets pass the audit');
+
+// cycling and favorites
+const frostDS = PRESETS.find((p: any) => p.id === 'frost-dark-subtle')!;
+const ringF = C.cycleList(PRESETS, 'family', frostDS, []);
+assert.equal(ringF.length, 6); assert.ok(ringF.every((t: any) => t.family === 'frost')); ok('cycle: family scope is the six members');
+assert.equal(C.stepTheme(ringF, frostDS.id, 1)!.id, ringF[1].id); assert.equal(C.stepTheme(ringF, frostDS.id, -1)!.id, ringF[5].id); ok('cycle: steps and wraps both ways');
+const loner = { ...frostDS, id: 'loner', family: undefined };
+assert.equal(C.cycleList([...PRESETS, loner], 'family', loner, []).length, 121); ok('cycle: a theme without a family cycles through all');
+const ringFav = C.cycleList(PRESETS, 'favorites', frostDS, ['pine-light-juicy', 'harbor-dark-subtle']);
+assert.deepEqual(ringFav.map((t: any) => t.id), ['harbor-dark-subtle', 'frost-dark-subtle', 'pine-light-juicy']); ok('cycle: favorites in collection order, current included');
+assert.equal(C.stepTheme([], 'x', 1), null); assert.equal(C.stepTheme(ringF, 'gone', 1)!.id, ringF[0].id); ok('cycle: empty list and missing current');
+await store.setFavorites(['a', 'b']);
+assert.deepEqual(store.getFavorites(), ['a', 'b']); assert.equal(mem.get('com.fireworklabs.theme-editor/favoriteThemes'), '["a","b"]'); ok('favorites persist');
 console.log(`\n${n} passed`);

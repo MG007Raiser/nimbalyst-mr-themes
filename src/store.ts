@@ -18,6 +18,7 @@ const KEY_USER_THEMES = 'userThemes';
 const KEY_FAMILIES = 'themeFamilies';
 const KEY_SEEDED = 'collectionSeeded';
 const KEY_BUILTINS_SEEN = 'builtinFamiliesSeen';
+const KEY_FAVORITES = 'favoriteThemes';
 
 let ctx: ExtensionContext | null = null;
 
@@ -153,6 +154,17 @@ export async function ensureSeeded(): Promise<void> {
 async function setBuiltinsSeen(ids: string[]): Promise<void> {
   lsSet(KEY_BUILTINS_SEEN, ids);
   await cfgSet(KEY_BUILTINS_SEEN, ids);
+}
+
+/** Theme ids the user starred, in the order they were starred. */
+export function getFavorites(): string[] {
+  const v = cfgGet<unknown>(KEY_FAVORITES) ?? lsGet<unknown>(KEY_FAVORITES);
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+export async function setFavorites(ids: string[]): Promise<void> {
+  lsSet(KEY_FAVORITES, ids);
+  await cfgSet(KEY_FAVORITES, ids);
 }
 
 export function toast(kind: 'info' | 'warning' | 'error', message: string): void {

@@ -51,6 +51,9 @@ async function seedVariedCollection(): Promise<void> {
       ordered.push(findPreset(`${family}-${faction}-${variation}`));
     });
   }
+  // The six families above lead in a varied order; every later built-in family follows in preset order.
+  const placed = new Set(ordered.map((t) => t.id));
+  ordered.push(...PRESETS.filter((p) => !placed.has(p.id)));
   if (new Set(ordered.map((t) => t.id)).size !== PRESETS.length) throw new Error('harness: collection order is not a permutation');
   await setCollection(ordered, getFamilies());
 }

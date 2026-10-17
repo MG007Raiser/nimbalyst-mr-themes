@@ -265,8 +265,15 @@ export const CSS = `
 .nte-suggest { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .nte .nte-suggest > button:not(.nte-btn) { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(127,127,127,.35); cursor: pointer; padding: 0; }
 .nte-empty { padding: 40px; text-align: center; color: var(--nim-text-faint); }
-.nte-breadcrumb { display: flex; align-items: center; gap: 6px; color: var(--nim-text-faint); font-size: 12px; }
-.nte-breadcrumb button { border: none; background: transparent; color: var(--nim-link); cursor: pointer; padding: 0; font: inherit; }
+.nte-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; row-gap: 4px; color: var(--nim-text-faint); font-size: 12px; }
+.nte-breadcrumb > button:not(.nte-star) { border: none; background: transparent; color: var(--nim-link); cursor: pointer; padding: 0; font: inherit; }
+.nte-star { border: none; background: transparent; cursor: pointer; padding: 0 2px; line-height: 0; color: var(--nim-text-faint) !important; border-radius: 4px; }
+.nte-star:hover { color: var(--nim-text) !important; }
+.nte-star.on, .nte-star.on:hover { color: var(--nim-warning) !important; }
+.nte-breadcrumb > span, .nte-breadcrumb > button { white-space: nowrap; }
+.nte-cycle { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--nim-border); }
+.nte-cycle .pos { font-variant-numeric: tabular-nums; min-width: 44px; text-align: center; color: var(--nim-text-muted); }
+.nte-cycle .nte-btn:disabled { opacity: .4; cursor: default; }
 `;
 
 export function ensureStyles(): void {

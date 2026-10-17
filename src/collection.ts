@@ -376,3 +376,28 @@ export function restoreBuiltinsInto(s: CollectionState): { state: CollectionStat
     themes: missing.themes.length,
   };
 }
+
+export type CycleScope = 'family' | 'all' | 'favorites';
+
+/**
+ * The themes the editor's previous/next buttons walk through, in collection
+ * order: the current theme's family (all themes when it has none), every
+ * theme, or the favorites. The current theme is always included so the
+ * position reads correctly even when it is not a favorite.
+ */
+export function cycleList(themes: ThemeFile[], scope: CycleScope, current: ThemeFile, favorites: string[]): ThemeFile[] {
+  if (scope === 'family' && current.family) return themes.filter((t) => t.family === current.family);
+  if (scope === 'favorites') {
+    const fav = new Set(favorites);
+    return themes.filter((t) => fav.has(t.id) || t.id === current.id);
+  }
+  return themes;
+}
+
+/** The theme `delta` steps from `currentId` in `list`, wrapping around. */
+export function stepTheme(list: ThemeFile[], currentId: string, delta: number): ThemeFile | null {
+  if (!list.length) return null;
+  const i = list.findIndex((t) => t.id === currentId);
+  if (i < 0) return list[delta < 0 ? list.length - 1 : 0];
+  return list[(((i + delta) % list.length) + list.length) % list.length];
+}

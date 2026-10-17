@@ -78,6 +78,12 @@
           "default": [],
           "description": "Ids of the built-in families already offered to this collection, so a family added in an update arrives once. Managed by the Theme Gallery.",
           "scope": "user"
+        },
+        "favoriteThemes": {
+          "type": "array",
+          "default": [],
+          "description": "Ids of the themes starred as favorites. Managed by the Theme Gallery.",
+          "scope": "user"
         }
       }
     }

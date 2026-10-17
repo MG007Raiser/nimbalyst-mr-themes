@@ -105,8 +105,9 @@ export function ThemeEditorView(props: ThemeEditorViewProps) {
           </div>
           <input
             className="nte-input nte-desc"
-            style={{ marginTop: 4, width: '100%', maxWidth: 520, padding: '2px 6px', fontSize: 12 }}
+            style={{ marginTop: 4, width: '100%', maxWidth: 720, padding: '2px 6px', fontSize: 12, textOverflow: 'ellipsis' }}
             value={theme.description ?? ''}
+            title={theme.description || undefined}
             readOnly={readOnly}
             placeholder={readOnly ? '' : 'Add a one-line description'}
             onChange={(e) => setMeta({ description: e.target.value })}
