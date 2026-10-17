@@ -49,7 +49,9 @@ export const CSS = `
 .nte code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: var(--nim-code-bg); border: 1px solid var(--nim-code-border); border-radius: 4px; padding: 1px 5px; }
 
 /* Editor layout */
-.nte-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--nim-border); background: var(--nim-bg); flex: none; }
+.nte-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--nim-border); background: var(--nim-bg); flex: none; }
+/* On a narrow window the actions drop to a second line instead of crushing the title, breadcrumb and cycler. */
+.nte-head > .nte-grow { flex: 1 1 460px; min-width: min(100%, 460px); }
 .nte-head input.nte-title { font-weight: 600; font-size: 14px; background: transparent !important; border: 1px solid transparent !important; border-radius: 6px; padding: 3px 6px; color: var(--nim-text) !important; min-width: 220px; font-family: inherit; box-shadow: none !important; }
 .nte-head input.nte-title:hover, .nte-head input.nte-title:focus { border-color: var(--nim-border) !important; background: var(--nim-bg-secondary) !important; outline: none; }
 .nte-head input.nte-desc { background: transparent !important; border-color: transparent !important; }
