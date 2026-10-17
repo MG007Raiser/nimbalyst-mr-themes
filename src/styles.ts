@@ -227,6 +227,14 @@ export const CSS = `
 .nte-warnbox ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
 .nte-dropzone { display: flex; align-items: center; gap: 10px; border: 1px dashed var(--nim-border); border-radius: 8px; padding: 10px 12px; color: var(--nim-text-muted); }
 .nte-dropzone.over { border-color: var(--nim-primary); background: var(--nim-bg-selected); }
+.nte-remixrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.nte-remixlabel { width: 70px; flex: none; font-size: 12px; color: var(--nim-text-muted); }
+.nte-remixrow .nte-importthumbs { margin-left: 0; }
+.nte-remixpick { border: 2px solid transparent; border-radius: 6px; padding: 0; background: transparent; cursor: pointer; line-height: 0; }
+.nte-remixpick:hover { border-color: var(--nim-border); }
+.nte-remixpick.on { border-color: var(--nim-primary); }
+.nte-remixroles { display: flex; align-items: center; gap: 6px; margin: 10px 0 0 80px; font-size: 11.5px; flex-wrap: wrap; }
+.nte-remixroles i { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--nim-border); }
 .nte-imgthumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--nim-border); flex: none; }
 .nte-imgpalette { display: flex; height: 18px; margin-top: 8px; border-radius: 6px; overflow: hidden; border: 1px solid var(--nim-border); }
 .nte-imgpalette i { flex-basis: 0; min-width: 8px; }

@@ -153,4 +153,18 @@ const dbz = familyFromPalette(paletteFromPixels(img([['#f37021', 300], ['#1c3f95
 assert.deepEqual([...dbz.generator!.signature!.pops!].sort(), ['#1c3f95', '#4fc3f7', '#ffd23f']); ok('image: close hues that differ in lightness (gold by orange, cyan by blue) stay separate pops');
 assert.equal(familyFromPalette(paletteFromPixels(img([['#f37021', 990], ['#1c3f95', 10]])), 'Edge').generator!.pops.length, 0); ok('image: a sliver under 2% is not a pop');
 assert.equal(warm.generator?.neutral, 'stone'); assert.ok(!['yellow', 'amber', 'orange'].includes(warm.generator!.pops[1])); ok('image: warm grays pick stone, and the info slot avoids warm hues');
+// remix: same colors, new roles
+const R = await import('../src/remix');
+const plFam = C.BUILTIN_FAMILIES.find((f: any) => f.id === 'power-level')!;
+const palette = (g: any) => [g.signature?.primary, ...(g.signature?.pops ?? [])].filter(Boolean).sort();
+const remixes = [1, 2, 3, 4, 5, 6].map((k) => R.remixFamily(plFam, k)!);
+assert.ok(remixes.every((r: any) => JSON.stringify(r.generator) !== JSON.stringify(plFam.generator))); ok('remix: never the original');
+assert.deepEqual(JSON.stringify(R.remixFamily(plFam, 3)), JSON.stringify(remixes[2])); ok('remix: remix n is stable');
+assert.ok(new Set(remixes.map((r: any) => JSON.stringify(r.generator))).size >= 5); ok('remix: successive remixes differ');
+assert.ok(remixes.every((r: any) => JSON.stringify(palette(r.generator)) === JSON.stringify(palette(plFam.generator)) && r.generator.signature.night === '#0f1830' && r.id === plFam.id)); ok('remix: same colors, same night tint, same id');
+const remixThemes = C.generateFamilyThemes(remixes[0]);
+assert.deepEqual(remixThemes.map((t: any) => t.id), members('power-level').map((t: any) => t.id)); ok('remix: theme ids match, so Replace keeps assignments');
+assert.equal(remixes.flatMap((r: any) => C.generateFamilyThemes(r)).flatMap((t: any) => auditTheme(t).filter((x: any) => !x.pass)).length, 0); ok('remix: every remix passes the audit');
+assert.ok(R.remixFamily(C.BUILTIN_FAMILIES[0], 1)!.generator!.signature === undefined); ok('remix: a Tailwind-only family stays Tailwind-only');
+assert.equal(R.remixFamily({ id: 'x', name: 'X' }, 1), null); ok('remix: a family without a generator cannot be remixed');
 console.log(`\n${n} passed`);

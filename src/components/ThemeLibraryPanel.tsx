@@ -22,6 +22,7 @@ import {
 } from '../collection';
 import { isValidColor, toHex, parseColor } from '../color';
 import { familyFromPalette, paletteFromPixels, type Swatch } from '../fromImage';
+import { canRemix, remixFamily, roleColors } from '../remix';
 import { KIT_DIR, KIT_FILES } from '../kit';
 import { LEGACY_PRESET_IDS, isPresetId } from '../presets';
 import { getProjectBridge, type ProjectInfo, type ProjectThemeBridge } from '../projectBridge';
@@ -47,7 +48,8 @@ type Modal =
   | { kind: 'deleteTheme'; theme: ThemeFile }
   | { kind: 'deleteFamily'; family: ThemeFamily }
   | { kind: 'family'; family: ThemeFamily | null }
-  | { kind: 'fromImage' };
+  | { kind: 'fromImage' }
+  | { kind: 'remix'; family: ThemeFamily };
 
 const GLOBAL_LABEL = 'Nimbalyst Global Theme';
 
@@ -281,7 +283,7 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
     toast('info', `Restored ${r.themes} built-in theme${r.themes === 1 ? '' : 's'} and ${r.families} famil${r.families === 1 ? 'y' : 'ies'}.`);
   };
 
-  const importPayload = async (payload: ImportPayload, mode: 'replace' | 'copy') => {
+  const importPayload = async (payload: ImportPayload, mode: 'replace' | 'copy', message?: (familyName: string) => string) => {
     const { state, familyId } = importInto(data, payload, mode);
     await save(state.themes, state.families);
     // A replace may have recolored the global theme; re-apply it.
@@ -293,7 +295,9 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
     }
     setModal(null);
     const n = payload.themes.length;
-    toast('info', payload.family
+    const famName = state.families.find((f) => f.id === familyId)?.name ?? '';
+    if (message) toast('info', message(famName));
+    else toast('info', payload.family
       ? `Imported the ${state.families.find((f) => f.id === familyId)?.name} family with ${n} theme${n === 1 ? '' : 's'}.`
       : `Imported ${n === 1 ? `"${payload.themes[0].name}"` : `${n} themes`}.`);
   };
@@ -753,6 +757,7 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
                           </span>
                         </button>
                         <div className="nte-row fh-actions">
+                          {canRemix(f) ? <Button size="sm" icon="shuffle" onClick={() => setModal({ kind: 'remix', family: f })} title="Shuffle this family's colors into new roles, preview, then replace or add as new">Remix</Button> : null}
                           <Button size="sm" icon="edit" onClick={() => setModal({ kind: 'family', family: f })} title="Change the name, sub text, header colors, or which themes are in it">Edit</Button>
                           <Button size="sm" icon="ios_share" onClick={() => setModal({ kind: 'exportFamily', family: f })} disabled={!members.length}>Export</Button>
                           <Button size="sm" variant="ghost" icon="delete" onClick={() => setModal({ kind: 'deleteFamily', family: f })}>Delete</Button>
@@ -825,6 +830,15 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
           />
         );
       })() : null}
+      {modal?.kind === 'remix' ? (
+        <RemixModal
+          family={modal.family}
+          current={membersOf(modal.family.id)}
+          onClose={() => setModal(null)}
+          onReplace={(p) => void importPayload(p, 'replace', (name) => `Replaced the ${name} family with the remix.`)}
+          onAddNew={(p) => void importPayload(p, 'copy', (name) => `Added ${name}.`)}
+        />
+      ) : null}
       {modal?.kind === 'fromImage' ? (
         <ImageFamilyModal onClose={() => setModal(null)} onAdd={(payload) => void importPayload(payload, 'copy')} />
       ) : null}
@@ -1036,6 +1050,115 @@ function ImportModal({ what, themeIds, familyIds, onClose, onImport }: {
       <div className="nte-row" style={{ justifyContent: 'flex-end', marginTop: 12 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button variant="primary" icon="download" disabled={!payload} onClick={() => payload && onImport(payload, hasClash ? mode : 'copy')}>Import</Button>
+      </div>
+    </ModalShell>
+  );
+}
+
+/**
+ * Remix a family: the same colors in new roles (see remix.ts). Shows the
+ * current six themes above the remix's six; clicking a remix thumbnail shows
+ * it live across the app. Replace keeps the theme ids, so projects and the
+ * global theme that use them keep using them.
+ */
+function RemixModal({ family, current, onClose, onReplace, onAddNew }: {
+  family: ThemeFamily;
+  current: ThemeFile[];
+  onClose: () => void;
+  onReplace: (p: ImportPayload) => void;
+  onAddNew: (p: ImportPayload) => void;
+}) {
+  const [n, setN] = useState(1);
+  const [live, setLive] = useState<string | null>(null);
+  const remix = useMemo(() => remixFamily(family, n), [family, n]);
+  const themes = useMemo(() => (remix ? generateFamilyThemes(remix) : []), [remix]);
+  useEffect(() => () => applier.setPreview(null), []);
+  // A new remix replaces the one being shown live.
+  useEffect(() => {
+    if (!live) return;
+    const t = themes.find((x) => x.id === live);
+    applier.setPreview(t ?? null);
+  }, [themes, live]);
+
+  const close = () => {
+    applier.setPreview(null);
+    onClose();
+  };
+  const toggleLive = (t: ThemeFile) => {
+    const on = live !== t.id;
+    setLive(on ? t.id : null);
+    applier.setPreview(on ? t : null);
+  };
+  const roles = remix?.generator ? roleColors(remix.generator) : null;
+
+  return (
+    <ModalShell onClose={close} wide>
+      <h3>Remix {family.name}</h3>
+      <p className="nte-muted" style={{ marginTop: 0 }}>
+        The same colors in new roles: a different color leads, the accents trade places, and the gray underneath or the light page tint may change. The dark mood stays. Click a remix theme to see it live across the app.
+      </p>
+      <div className="nte-remixrow">
+        <span className="nte-remixlabel">Current</span>
+        <span className="nte-importthumbs">{current.map((t) => <ThemeThumb key={t.id} theme={t} />)}</span>
+      </div>
+      {remix && roles ? (
+        <>
+          <div className="nte-remixrow">
+            <span className="nte-remixlabel">Remix {n}</span>
+            <span className="nte-importthumbs">
+              {themes.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`nte-remixpick${live === t.id ? ' on' : ''}`}
+                  onClick={() => toggleLive(t)}
+                  title={live === t.id ? `Showing ${t.name} live. Click to stop.` : `Show ${t.name} live across the app`}
+                >
+                  <ThemeThumb theme={t} />
+                </button>
+              ))}
+            </span>
+          </div>
+          <div className="nte-remixroles">
+            <span className="nte-faint">Lead</span>
+            <i style={{ background: roles.lead }} title={roles.lead} />
+            {roles.pops.length ? <span className="nte-faint">Accents</span> : null}
+            {roles.pops.map((c, i) => <i key={i} style={{ background: c }} title={c} />)}
+            <span className="nte-faint">· {remix.generator!.neutral} gray</span>
+          </div>
+        </>
+      ) : (
+        <div className="nte-importstatus err"><Icon name="error" size={16} />This family has nothing to remix.</div>
+      )}
+      <div className="nte-row" style={{ justifyContent: 'flex-end', marginTop: 12, flexWrap: 'wrap' }}>
+        <Button variant="ghost" onClick={close}>Cancel</Button>
+        <Button icon="shuffle" disabled={!remix} onClick={() => setN((k) => k + 1)}>Remix again</Button>
+        <Button
+          icon="library_add"
+          disabled={!remix}
+          onClick={() => {
+            if (!remix) return;
+            const copy: ThemeFamily = { ...remix, id: slugify(`${family.name} remix`), name: `${family.name} Remix` };
+            applier.setPreview(null);
+            onAddNew({ family: copy, themes: generateFamilyThemes(copy) });
+          }}
+          title="Keep the original and add the remix as a family of its own"
+        >
+          Add as new family
+        </Button>
+        <Button
+          variant="primary"
+          icon="published_with_changes"
+          disabled={!remix}
+          onClick={() => {
+            if (!remix) return;
+            applier.setPreview(null);
+            onReplace({ family: remix, themes });
+          }}
+          title="Overwrite this family's six themes with the remix; projects using them keep them"
+        >
+          Replace family
+        </Button>
       </div>
     </ModalShell>
   );

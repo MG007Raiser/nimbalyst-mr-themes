@@ -38,6 +38,7 @@ This is the MG007Raiser fork. It keeps the original extension id, so your collec
 - Cycle through themes live: open a theme and use the arrows (or the arrow keys) to step through its family, the whole collection, or your favorites while the app follows along. Esc turns the live preview off.
 - Favorites: star themes on their cards or in the editor; they get their own row at the top of the gallery.
 - Family from image: pick, drop or paste a picture in Theme Families and get a light and dark family built from its colors, checked for contrast like the rest.
+- Remix: on any generated family, shuffle its colors into new roles (a different lead, reordered accents, another gray), preview the remix live, then replace the family or add the remix as a new one.
 - Families added in an update arrive in your collection once, without bringing back families you deleted.
 - The Family Builder Kit CLI runs on Windows and takes `--paper <hue>` and `--contrast high`.
 

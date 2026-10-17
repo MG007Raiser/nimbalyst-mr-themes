@@ -89,7 +89,7 @@
     }
   },
   "marketplace": {
-    "changelog": "0.7.0: Cycle through themes live from the editor (family, all, or favorites; arrow keys; Esc reverts); favorites; Family from image; signature families with exact colors, starting with Mecha and Power Level (132 presets); description no longer cut off in the editor header.\n0.6.0: Ten new built-in families (Parchment, Solar, Frost, Nocturne, Bramble, Lavender, Arcade, Dusk, Pine, Beacon), 120 presets; paper and high-contrast generator options, also in the Family Builder Kit CLI; existing collections receive new built-in families once, without bringing back deleted ones.\n0.5.0: Card menus, grouping-only New family wizard with five header colors, separate Import theme and Import family, Download Family Builder Kit for Agents, Cancel in the theme editor; tray pickers fixed for long collections.\n0.4.0: Theme Collection and user theme families; every built-in theme can be edited and deleted; Restore built-ins; family export; terminal colors contrast-checked in every variation.\n0.3.0: Renamed from Nimbalyst Theme Editor; new gutter icon and help tooltip.",
+    "changelog": "0.7.0: Cycle through themes live from the editor (family, all, or favorites; arrow keys; Esc reverts); favorites; Family from image; Remix (same colors in new roles, previewed live, replace or add as new); light signature themes carry their colors in the surfaces; signature families with exact colors, starting with Mecha and Power Level (132 presets); description no longer cut off in the editor header.\n0.6.0: Ten new built-in families (Parchment, Solar, Frost, Nocturne, Bramble, Lavender, Arcade, Dusk, Pine, Beacon), 120 presets; paper and high-contrast generator options, also in the Family Builder Kit CLI; existing collections receive new built-in families once, without bringing back deleted ones.\n0.5.0: Card menus, grouping-only New family wizard with five header colors, separate Import theme and Import family, Download Family Builder Kit for Agents, Cancel in the theme editor; tray pickers fixed for long collections.\n0.4.0: Theme Collection and user theme families; every built-in theme can be edited and deleted; Restore built-ins; family export; terminal colors contrast-checked in every variation.\n0.3.0: Renamed from Nimbalyst Theme Editor; new gutter icon and help tooltip.",
     "categories": [
       "developer-tools"
     ],
@@ -127,6 +127,7 @@
       "Twenty-two theme families × light and dark × subtle, pigment, juicy: 132 presets",
       "Flip through themes live with the arrows; star favorites",
       "Family from image: any picture becomes a light and dark family",
+      "Remix a family: same colors, new roles, previewed live",
       "Edit all 75 theme colors, not just the 20 the manifest exposes",
       "Contrast audit and one-click repair, three UI previews, and Try live",
       "Share as a .nimtheme file, JSON, or an installable theme extension",
