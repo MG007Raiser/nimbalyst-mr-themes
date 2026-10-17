@@ -1,7 +1,7 @@
 /**
  * Theme families.
  *
- * Twenty families, each built on one dominant Tailwind hue with up to four pop
+ * Twenty-two families, each built on one dominant Tailwind hue with up to four pop
  * hues and a neutral ladder. Every family has two factions (light, dark) and
  * each faction three variations with a distinct character:
  *
@@ -42,6 +42,25 @@ export interface FamilySpec {
   paper?: Hue;
   /** 'high' raises every contrast target (text 10:1, accents and code 7:1) and draws 3:1 borders. */
   contrast?: 'high';
+  /** Exact colors pinned on top of the Tailwind base (see Signature). */
+  signature?: Signature;
+}
+
+/**
+ * Exact colors for a family whose identity a Tailwind shade cannot carry
+ * (a brand blue, a costume orange, colors picked from an image). Each one is
+ * still verified: nudged toward white or black until it meets its contrast
+ * target, so it keeps its hue and the theme stays readable.
+ */
+export interface Signature {
+  /** The accent (primary, focus ring). */
+  primary?: string;
+  /** Up to four, in the same slots as pops: links and code-function, info hue and code-attr, code-variable, code-property and highlights. */
+  pops?: string[];
+  /** Dark surfaces are mixed toward this color: a little in subtle, most of the way in juicy. */
+  night?: string;
+  /** Light surfaces are mixed toward this color. */
+  day?: string;
 }
 
 export const FAMILIES: FamilySpec[] = [
@@ -64,6 +83,8 @@ export const FAMILIES: FamilySpec[] = [
   { id: 'arcade', name: 'Arcade', description: 'Neon cabinet: pink over stone with lime, cyan and orange.', dominant: 'pink', pops: ['lime', 'cyan', 'orange', 'purple'], neutral: 'stone' },
   { id: 'dusk', name: 'Dusk', description: 'Sunset over the city: orange over slate.', dominant: 'orange', pops: ['pink', 'violet', 'amber', 'sky'], neutral: 'slate' },
   { id: 'pine', name: 'Pine', description: 'Cool forest: emerald over slate.', dominant: 'emerald', pops: ['teal', 'lime', 'amber', 'sky'], neutral: 'slate' },
+  { id: 'mecha', name: 'Mecha', description: 'Inspired by the RX-78 mobile suit: white armor, cockpit blue, red and V-fin yellow.', dominant: 'blue', pops: ['red', 'sky', 'yellow', 'amber'], neutral: 'gray', signature: { primary: '#1d4fa8', pops: ['#d42a2a', '#3aa5e6', '#f5c400', '#f08c1a'], night: '#0c1a33', day: '#f4f6f9' } },
+  { id: 'power-level', name: 'Power Level', description: 'Inspired by Dragon Ball Z: gi orange, wristband blue, Super Saiyan gold and ki blue.', dominant: 'orange', pops: ['blue', 'cyan', 'yellow', 'emerald'], neutral: 'slate', signature: { primary: '#f26b1d', pops: ['#2350b8', '#38c6f4', '#ffc93c', '#3faa5a'], night: '#0f1830', day: '#eef6ff' } },
   { id: 'beacon', name: 'Beacon', description: 'High contrast for low vision and bright rooms: blue over neutral gray.', dominant: 'blue', pops: ['sky', 'violet', 'orange', 'pink'], neutral: 'neutral', contrast: 'high' },
 ];
 
@@ -216,6 +237,25 @@ interface Character {
 function character(f: FamilySpec, dark: boolean, v: Variation): Character {
   const ch = baseCharacter(f, dark, v);
   if (!dark && f.paper) Object.assign(ch, paperSurfaces(f.neutral, f.paper, v));
+  const sig = f.signature;
+  if (dark && sig?.night) {
+    const k = { subtle: 0.35, pigment: 0.7, juicy: 0.85 }[v];
+    const night = sig.night;
+    ch.bg = mix(ch.bg, night, k);
+    ch.bg2 = mix(ch.bg2, mix(night, BLACK, 0.35), k);
+    ch.bg3 = mix(ch.bg3, mix(night, WHITE, 0.1), k);
+    ch.border = mix(ch.border, mix(night, WHITE, 0.18), k);
+    ch.active = mix(ch.active, mix(night, WHITE, 0.22), k);
+  }
+  if (!dark && sig?.day) {
+    const k = { subtle: 0.5, pigment: 0.8, juicy: 0.6 }[v];
+    const day = sig.day;
+    ch.bg = mix(ch.bg, day, k);
+    ch.bg2 = mix(ch.bg2, mix(day, BLACK, 0.04), k);
+    ch.bg3 = mix(ch.bg3, mix(day, BLACK, 0.08), k);
+    ch.border = mix(ch.border, mix(day, BLACK, 0.15), k);
+    ch.active = mix(ch.active, mix(day, BLACK, 0.12), k);
+  }
   if (f.contrast === 'high') {
     // Push the surfaces toward the end of the ladder, then draw borders and hovers that hold up.
     const end = dark ? BLACK : WHITE;
@@ -315,11 +355,17 @@ export function buildTheme(f: FamilySpec, faction: Faction, variation: Variation
   const pop = (i: number): Hue => f.pops[i] ?? f.pops[f.pops.length - 1] ?? d;
   const ch = character(f, dark, variation);
   const T = f.contrast === 'high' ? TARGET_HIGH : TARGET;
+  const sig = f.signature;
   const surfaces = [ch.bg, ch.bg2, ch.bg3];
 
   /** A pop or dominant color at the variation's saturation, verified against the surfaces. */
   const tinted = (hue: Hue, shade: Shade, bgs: string[], min: number): string =>
     verified(mix(tw(hue, shade), tw(n, shade), ch.popMix), hue, shade, bgs, min, dark);
+  /** Pop slot i: the signature's exact color when it has one, else the Tailwind pop. */
+  const popColor = (i: number, shade: Shade, bgs: string[], min: number): string => {
+    const exact = sig?.pops?.[i];
+    return exact ? verified(mix(exact, tw(n, shade), ch.popMix), pop(i), shade, bgs, min, dark) : tinted(pop(i), shade, bgs, min);
+  };
 
   // Text on every surface. Verified keeps the tint and only nudges when needed.
   const text = verified(ch.text, n, dark ? 100 : 900, surfaces, T.text, dark);
@@ -328,7 +374,8 @@ export function buildTheme(f: FamilySpec, faction: Faction, variation: Variation
   const disabled = verified(ch.disabled, n, dark ? 600 : 400, [ch.bg], T.disabled, dark);
 
   // Accent
-  let primary = verified(mix(tw(d, ch.accentShade), tw(n, ch.accentShade), ch.accentMix), d, ch.accentShade, surfaces, T.accent, dark);
+  const accentBase = sig?.primary ? mix(sig.primary, tw(n, ch.accentShade), ch.accentMix) : mix(tw(d, ch.accentShade), tw(n, ch.accentShade), ch.accentMix);
+  let primary = verified(accentBase, d, ch.accentShade, surfaces, T.accent, dark);
   let onPrimary = onColor(primary);
   for (let i = 0; i < 3 && contrastRatio(onPrimary, primary) < 4.5; i++) {
     primary = nextShade(d, primary, dark);
@@ -339,7 +386,7 @@ export function buildTheme(f: FamilySpec, faction: Faction, variation: Variation
   // Links and info: subtle keeps the dominant (monochrome), the others reach for pops.
   const linkHue = variation === 'subtle' ? d : pop(0);
   const linkShade: Shade = dark ? 300 : 600;
-  const link = tinted(linkHue, linkShade, surfaces, T.link);
+  const link = variation === 'subtle' ? tinted(linkHue, linkShade, surfaces, T.link) : popColor(0, linkShade, surfaces, T.link);
   const linkHover = mix(link, dark ? WHITE : BLACK, 0.15);
   const infoHue = variation === 'subtle' ? d : pop(1);
   const info = matte(dual(infoHue, ch.bg, dark, T), tw(n, 500), ch.statusMatte, ch.bg, T);
@@ -368,10 +415,10 @@ export function buildTheme(f: FamilySpec, faction: Faction, variation: Variation
     'on-primary': onPrimary,
     purple: tinted(purpleHue, dark ? 400 : 600, surfaces, T.accent),
     'code-selector': tinted(d, codeShade, codeBgs, T.code),
-    'code-function': tinted(pop(0), codeShade, codeBgs, T.code),
-    'code-attr': tinted(pop(1), codeShade, codeBgs, T.code),
-    'code-variable': tinted(pop(2), codeShade, codeBgs, T.code),
-    'code-property': tinted(pop(3), codeShade, codeBgs, T.code),
+    'code-function': popColor(0, codeShade, codeBgs, T.code),
+    'code-attr': popColor(1, codeShade, codeBgs, T.code),
+    'code-variable': popColor(2, codeShade, codeBgs, T.code),
+    'code-property': popColor(3, codeShade, codeBgs, T.code),
     'code-comment': walk(n, 500, codeBgs, T.comment, dark),
     'code-punctuation': walk(n, dark ? 400 : 600, codeBgs, T.code, dark),
     'code-operator': muted,
@@ -385,7 +432,7 @@ export function buildTheme(f: FamilySpec, faction: Faction, variation: Variation
   if (variation === 'subtle') {
     // Near monochrome: the dominant carries the syntax, one pop as a tint.
     extended['code-variable'] = tinted(d, codeShade, codeBgs, T.code);
-    extended['code-property'] = tinted(pop(0), codeShade, codeBgs, T.code);
+    extended['code-property'] = popColor(0, codeShade, codeBgs, T.code);
     extended['code-attr'] = verified(mix(tw(n, dark ? 300 : 700), tw(d, codeShade), 0.35), n, dark ? 300 : 700, codeBgs, T.code, dark);
   }
   if (variation === 'juicy') {
@@ -396,9 +443,10 @@ export function buildTheme(f: FamilySpec, faction: Faction, variation: Variation
     extended['terminal-ansi-bright-cyan'] = walk(cyanHue, dark ? 300 : 700, [ch.bg2], T.code, dark);
     extended['terminal-cursor'] = primary;
     const hl = pop(3);
-    extended['highlight-bg'] = withAlpha(tw(hl, 400), 0.28);
-    extended['highlight-border'] = withAlpha(tw(hl, 400), 0.55);
-    extended['comment-mark'] = tw(hl, 300);
+    const hlColor = sig?.pops?.[3] ?? tw(hl, 400);
+    extended['highlight-bg'] = withAlpha(hlColor, 0.28);
+    extended['highlight-border'] = withAlpha(hlColor, 0.55);
+    extended['comment-mark'] = sig?.pops?.[3] ? mix(sig.pops[3], WHITE, 0.25) : tw(hl, 300);
     extended['toolbar-active'] = withAlpha(primary, 0.25);
   }
 
@@ -434,5 +482,6 @@ export function familyOf(id: string | undefined): FamilySpec | undefined {
 /** Swatches that summarize a family in the gallery header. */
 export function familySwatches(f: FamilySpec, dark: boolean): string[] {
   const s: Shade = dark ? 400 : 600;
-  return [tw(f.dominant, s), ...f.pops.map((p) => tw(p, s))];
+  const sig = f.signature;
+  return [sig?.primary ?? tw(f.dominant, s), ...f.pops.map((p, i) => sig?.pops?.[i] ?? tw(p, s))];
 }

@@ -28,13 +28,13 @@ const base = { themes: [...PRESETS], families: C.BUILTIN_FAMILIES.map((f: any) =
 const picks = ['harbor-dark-juicy', 'grove-light-subtle', 'plum-dark-pigment'];
 const sw = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff'];
 const made = C.saveFamilyInto(base, { name: 'Faves', description: 'Mine.', swatches: [...sw, '#123456', 'nope'], themeIds: picks }, null);
-assert.equal(made.family.id, 'faves'); assert.equal(made.state.families[0].id, 'faves'); assert.equal(made.state.themes.length, 120);
+assert.equal(made.family.id, 'faves'); assert.equal(made.state.families[0].id, 'faves'); assert.equal(made.state.themes.length, 132);
 assert.deepEqual(made.family.swatches, sw); assert.equal(made.moved, 3);
 assert.deepEqual(made.state.themes.filter((t: any) => t.family === 'faves').map((t: any) => t.id).sort(), [...picks].sort());
 assert.equal(made.state.themes.filter((t: any) => t.family === 'harbor').length, 5); ok('new family groups existing themes, moves them, keeps 5 valid swatches, creates none');
 const edited = C.saveFamilyInto(made.state, { name: 'Faves', description: '', swatches: [], themeIds: ['grove-light-subtle'] }, 'faves');
 assert.equal(edited.state.themes.filter((t: any) => t.family === 'faves').length, 1); assert.equal(edited.state.themes.find((t: any) => t.id === 'harbor-dark-juicy').family, undefined);
-assert.equal(edited.family.swatches, undefined); assert.equal(edited.state.themes.length, 120); ok('edit: unselected members leave the family and stay in the collection');
+assert.equal(edited.family.swatches, undefined); assert.equal(edited.state.themes.length, 132); ok('edit: unselected members leave the family and stay in the collection');
 const harborEdit = C.saveFamilyInto(base, { name: 'Harbor', description: 'x', swatches: sw, themeIds: base.themes.filter((t: any) => t.family === 'harbor').map((t: any) => t.id) }, 'harbor');
 assert.deepEqual(harborEdit.family.generator, C.BUILTIN_FAMILIES[0].generator); ok('edit keeps a built-in family\'s generator as provenance');
 assert.deepEqual(C.familyHeaderColors({ ...made.family }, [], true), sw); assert.equal(C.familyHeaderColors(C.BUILTIN_FAMILIES[0], [], true).length, 5);
@@ -62,31 +62,31 @@ assert.equal(loose.state.themes[0].family, undefined); ok('loose theme drops a f
 
 // delete family
 const keep = C.deleteFamilyFrom(base, 'harbor', false);
-assert.equal(keep.state.themes.length, 120); assert.equal(keep.state.themes.filter((t: any) => t.family === 'harbor').length, 0); assert.deepEqual(keep.removedThemeIds, []); ok('delete family, keep themes');
+assert.equal(keep.state.themes.length, 132); assert.equal(keep.state.themes.filter((t: any) => t.family === 'harbor').length, 0); assert.deepEqual(keep.removedThemeIds, []); ok('delete family, keep themes');
 const drop = C.deleteFamilyFrom(base, 'harbor', true);
-assert.equal(drop.state.themes.length, 114); assert.equal(drop.removedThemeIds.length, 6); ok('delete family and themes');
+assert.equal(drop.state.themes.length, 126); assert.equal(drop.removedThemeIds.length, 6); ok('delete family and themes');
 
 // restore
 const r1 = C.restoreBuiltinsInto(keep.state);
 assert.equal(r1.families, 1); assert.equal(r1.themes, 0); assert.equal(r1.state.themes.filter((t: any) => t.family === 'harbor').length, 6); ok('restore: kept themes rejoin restored family');
 const r2 = C.restoreBuiltinsInto(drop.state);
-assert.equal(r2.themes, 6); assert.equal(r2.state.themes.length, 120); ok('restore: deleted themes come back');
+assert.equal(r2.themes, 6); assert.equal(r2.state.themes.length, 132); ok('restore: deleted themes come back');
 assert.deepEqual(C.missingBuiltins(base), { families: [], themes: [] }); ok('nothing missing on a fresh collection');
 
 // store seeding
 mem.set('com.fireworklabs.theme-editor/userThemes', JSON.stringify([{ id: 'mine', name: 'Mine', isDark: true, colors: { bg: '#000000' } }]));
-assert.equal(store.getCollection().length, 121); assert.equal(store.getCollection()[0].id, 'mine'); assert.equal(store.getFamilies().length, 20); ok('pre-seed view: user themes then presets, builtin families');
+assert.equal(store.getCollection().length, 133); assert.equal(store.getCollection()[0].id, 'mine'); assert.equal(store.getFamilies().length, 22); ok('pre-seed view: user themes then presets, builtin families');
 await store.ensureSeeded();
-assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/userThemes')!).length, 121); assert.equal(mem.get('com.fireworklabs.theme-editor/collectionSeeded'), '1'); ok('seed persisted');
+assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/userThemes')!).length, 133); assert.equal(mem.get('com.fireworklabs.theme-editor/collectionSeeded'), '1'); ok('seed persisted');
 await store.setCollection([], []);
 assert.equal(store.getCollection().length, 0); assert.equal(store.getFamilies().length, 0); ok('after seeding, an empty collection stays empty (no re-seed)');
-assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/builtinFamiliesSeen')!).length, 20); ok('seeding records every built-in family as seen');
+assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/builtinFamiliesSeen')!).length, 22); ok('seeding records every built-in family as seen');
 
 // new built-in families reach collections seeded by an older version, once
 const ids10 = C.BUILTIN_FAMILIES.slice(0, 10).map((f: any) => f.id);
 const old = { themes: PRESETS.filter((p: any) => ids10.includes(p.family)), families: C.BUILTIN_FAMILIES.slice(0, 10).map((f: any) => ({ ...f })) };
 const up = C.addNewBuiltinsInto(old, C.LEGACY_BUILTIN_FAMILY_IDS);
-assert.equal(up.added.length, 10); assert.equal(up.state.themes.length, 120); assert.equal(up.state.families.length, 20); assert.equal(up.seen.length, 20); ok('upgrade: ten new families and their 60 themes are added');
+assert.equal(up.added.length, 12); assert.equal(up.state.themes.length, 132); assert.equal(up.state.families.length, 22); assert.equal(up.seen.length, 22); ok('upgrade: twelve new families and their 72 themes are added');
 const gone = { themes: old.themes.filter((t: any) => t.family !== 'harbor'), families: old.families.filter((f: any) => f.id !== 'harbor') };
 assert.equal(C.addNewBuiltinsInto(gone, C.LEGACY_BUILTIN_FAMILY_IDS).state.families.some((f: any) => f.id === 'harbor'), false); ok('upgrade: a deleted family that was already seen stays deleted');
 assert.equal(C.addNewBuiltinsInto(up.state, up.seen).added.length, 0); ok('upgrade runs once');
@@ -95,7 +95,7 @@ assert.equal(C.addNewBuiltinsInto(mine, C.LEGACY_BUILTIN_FAMILY_IDS).state.theme
 mem.delete('com.fireworklabs.theme-editor/builtinFamiliesSeen');
 await store.setCollection(old.themes, old.families);
 await store.ensureSeeded();
-assert.equal(store.getCollection().length, 120); assert.equal(store.getFamilies().length, 20); assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/builtinFamiliesSeen')!).length, 20); ok('store: a 0.5.x collection gains the new families on startup');
+assert.equal(store.getCollection().length, 132); assert.equal(store.getFamilies().length, 22); assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/builtinFamiliesSeen')!).length, 22); ok('store: a 0.5.x collection gains the new families on startup');
 
 // generator options: paper and high contrast
 const members = (id: string) => PRESETS.filter((p: any) => p.family === id);
@@ -103,7 +103,7 @@ assert.ok(members('parchment').filter((t: any) => !t.isDark).every((t: any) => t
 const { contrastRatio } = await import('../src/color');
 assert.ok(members('beacon').every((t: any) => contrastRatio(t.colors.text, t.colors.bg) >= 10 && contrastRatio(t.colors.primary, t.colors.bg) >= 7 && contrastRatio(t.colors.border, t.colors.bg) >= 3)); ok('high contrast: text 10:1, accent 7:1, borders 3:1');
 assert.equal(C.normalizeFamily({ name: 'B', generator: { dominant: 'blue', pops: [], neutral: 'gray', paper: 'amber', contrast: 'high' } }).generator?.contrast, 'high'); ok('family files carry paper and contrast');
-assert.equal(PRESETS.flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('all 120 presets pass the audit');
+assert.equal(PRESETS.flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('all 132 presets pass the audit');
 
 // cycling and favorites
 const frostDS = PRESETS.find((p: any) => p.id === 'frost-dark-subtle')!;
@@ -111,10 +111,17 @@ const ringF = C.cycleList(PRESETS, 'family', frostDS, []);
 assert.equal(ringF.length, 6); assert.ok(ringF.every((t: any) => t.family === 'frost')); ok('cycle: family scope is the six members');
 assert.equal(C.stepTheme(ringF, frostDS.id, 1)!.id, ringF[1].id); assert.equal(C.stepTheme(ringF, frostDS.id, -1)!.id, ringF[5].id); ok('cycle: steps and wraps both ways');
 const loner = { ...frostDS, id: 'loner', family: undefined };
-assert.equal(C.cycleList([...PRESETS, loner], 'family', loner, []).length, 121); ok('cycle: a theme without a family cycles through all');
+assert.equal(C.cycleList([...PRESETS, loner], 'family', loner, []).length, 133); ok('cycle: a theme without a family cycles through all');
 const ringFav = C.cycleList(PRESETS, 'favorites', frostDS, ['pine-light-juicy', 'harbor-dark-subtle']);
 assert.deepEqual(ringFav.map((t: any) => t.id), ['harbor-dark-subtle', 'frost-dark-subtle', 'pine-light-juicy']); ok('cycle: favorites in collection order, current included');
 assert.equal(C.stepTheme([], 'x', 1), null); assert.equal(C.stepTheme(ringF, 'gone', 1)!.id, ringF[0].id); ok('cycle: empty list and missing current');
 await store.setFavorites(['a', 'b']);
 assert.deepEqual(store.getFavorites(), ['a', 'b']); assert.equal(mem.get('com.fireworklabs.theme-editor/favoriteThemes'), '["a","b"]'); ok('favorites persist');
+// signature families: exact colors survive where they pass, and travel in family files
+const mechaLJ = PRESETS.find((p: any) => p.id === 'mecha-light-juicy')!;
+assert.equal(mechaLJ.colors.primary, '#1d4fa8'); ok('signature: an exact accent that passes is kept as is');
+assert.ok(members('power-level').every((t: any) => contrastRatio(t.colors.primary, t.colors.bg) >= 4.5)); ok('signature: an accent that cannot pass is nudged until it does');
+const sigFam = C.normalizeFamily({ name: 'S', generator: { dominant: 'blue', pops: ['red'], neutral: 'gray', signature: { primary: '#123456', pops: ['#ff0000', 'nope', '#00ff00'], night: 'bad', day: '#eeeeee' } } });
+assert.deepEqual(sigFam.generator?.signature, { primary: '#123456', day: '#eeeeee', pops: ['#ff0000', '', '#00ff00'] }); ok('signature: family files keep valid colors and slot positions');
+assert.equal(C.generateFamilyThemes(sigFam).flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('signature: an imported signature family passes the audit');
 console.log(`\n${n} passed`);

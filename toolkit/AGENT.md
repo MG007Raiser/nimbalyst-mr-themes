@@ -98,6 +98,17 @@ and `character()`, summarized in the brainstorming brief you were given):
   10:1, muted and faint 7:1, accents, links and code 7:1, status 5.5:1, and
   borders 3:1. Use it when the user asks for accessibility, low vision, or a
   theme that holds up in a bright room.
+- **`signature`** (optional, JSON only) — exact colors pinned on top of the
+  Tailwind base, for an identity no Tailwind shade carries (a brand blue, a
+  costume orange, a character's palette): `{ "primary": "#1d4fa8", "pops":
+  ["#d42a2a", "#3aa5e6", "#f5c400", "#f08c1a"], "night": "#0c1a33", "day":
+  "#f4f6f9" }`. `pops` fill the same four slots as the hue pops (an empty
+  string leaves a slot to the hue); `night` and `day` tint the dark and light
+  surfaces. Each color is still verified and nudged toward white or black until
+  it meets its target, so a bright orange accent on a light theme comes out a
+  burnt orange. Generate with the CLI first, add `signature` to the family's
+  `generator` in the `.nimfamily`, then re-run `audit`. The built-in Mecha and
+  Power Level families are examples.
 - **Variations** (all three are always generated, no parameter): `subtle`
   (near-monochrome, lower contrast band), `pigment` (deep matte, ink-on-paper),
   `juicy` (saturated pops, true blacks/whites). Status colors (success/

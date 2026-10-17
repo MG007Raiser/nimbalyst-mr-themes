@@ -20,7 +20,7 @@
  *   Every theme in the file is filed under that family on import.
  * The importer also accepts a bare array of themes, or `{ "themes": [...] }`.
  */
-import { FAMILIES, FACTIONS, VARIATIONS, buildTheme, familySwatches, type FamilySpec } from './families';
+import { FAMILIES, FACTIONS, VARIATIONS, buildTheme, familySwatches, type FamilySpec, type Signature } from './families';
 import { PRESETS } from './presets';
 import { HUES, type Hue } from './tailwind';
 import { isValidColor } from './color';
@@ -38,6 +38,8 @@ export interface FamilyGenerator {
   paper?: Hue;
   /** 'high' raises every contrast target (see FamilySpec.contrast). */
   contrast?: 'high';
+  /** Exact colors pinned on top of the base (see Signature in families.ts). */
+  signature?: Signature;
 }
 
 export interface ThemeFamily {
@@ -63,6 +65,7 @@ export const BUILTIN_FAMILIES: ThemeFamily[] = FAMILIES.map((f) => ({
   generator: {
     dominant: f.dominant, pops: [...f.pops], neutral: f.neutral,
     ...(f.paper ? { paper: f.paper } : {}), ...(f.contrast ? { contrast: f.contrast } : {}),
+    ...(f.signature ? { signature: { ...f.signature, ...(f.signature.pops ? { pops: [...f.signature.pops] } : {}) } } : {}),
   },
 }));
 
@@ -125,8 +128,30 @@ export function normalizeFamily(input: unknown): ThemeFamily {
     out.generator = { dominant: g.dominant, pops, neutral: g.neutral };
     if (isHue(g.paper)) out.generator.paper = g.paper;
     if (g.contrast === 'high') out.generator.contrast = 'high';
+    const sig = normalizeSignature(g.signature);
+    if (sig) out.generator.signature = sig;
   }
   return out;
+}
+
+/** Keep only valid colors from a signature; null when nothing is left. */
+function normalizeSignature(input: unknown): Signature | null {
+  if (!input || typeof input !== 'object') return null;
+  const o = input as Record<string, unknown>;
+  const color = (v: unknown) => (typeof v === 'string' && isValidColor(v) ? v.trim() : undefined);
+  const out: Signature = {};
+  const primary = color(o.primary);
+  const night = color(o.night);
+  const day = color(o.day);
+  if (primary) out.primary = primary;
+  if (night) out.night = night;
+  if (day) out.day = day;
+  if (Array.isArray(o.pops)) {
+    // Slots are positional, so an invalid entry becomes a gap the Tailwind pop fills, not a shift.
+    const pops = o.pops.slice(0, 4).map((v) => color(v) ?? '');
+    if (pops.some(Boolean)) out.pops = pops;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 export interface ImportPayload {
