@@ -62,7 +62,9 @@ else is either explicit in `extended` or derived by `deriveExtended()`.
     "generator": {                          // omit for a hand-authored family
       "dominant": "sky",                    // Tailwind hue
       "pops": ["cyan", "indigo", "amber", "rose"],  // up to 4, most important first
-      "neutral": "slate"                    // Tailwind neutral hue
+      "neutral": "slate",                   // Tailwind neutral hue
+      "paper": "amber",                     // optional; light themes on tinted paper
+      "contrast": "high"                    // optional; raised contrast targets
     }
   },
   "themes": [ /* 6 ThemeFile objects, ids `<family>-<faction>-<variation>` */ ]
@@ -89,6 +91,13 @@ and `character()`, summarized in the brainstorming brief you were given):
   missing slots reuse the last pop or the dominant hue.
 - **`neutral`** — the gray ladder backing every surface and text color
   (`slate`, `gray`, `zinc`, `neutral`, or `stone`).
+- **`paper`** (optional, `--paper <hue>`) — light themes only: surfaces are
+  tinted with this hue's 50-200 shades, like cream or sepia paper, instead of
+  near-white. `amber` gives cream, `orange` gives sepia. Dark themes ignore it.
+- **`contrast`** (optional, `--contrast high`) — raises every target: text
+  10:1, muted and faint 7:1, accents, links and code 7:1, status 5.5:1, and
+  borders 3:1. Use it when the user asks for accessibility, low vision, or a
+  theme that holds up in a bright room.
 - **Variations** (all three are always generated, no parameter): `subtle`
   (near-monochrome, lower contrast band), `pigment` (deep matte, ink-on-paper),
   `juicy` (saturated pops, true blacks/whites). Status colors (success/

@@ -34,7 +34,7 @@ function usage() {
 
 Usage:
   mrthemes hues
-  mrthemes generate --name "Tidepool" [--id tidepool] --dominant sky --pops cyan,indigo,amber,rose --neutral slate [--description "..."] [--out work/<id>.nimfamily]
+  mrthemes generate --name "Tidepool" [--id tidepool] --dominant sky --pops cyan,indigo,amber,rose --neutral slate [--paper amber] [--contrast high] [--description "..."] [--out work/<id>.nimfamily]
   mrthemes audit <file> [--json] [--all]
   mrthemes fix <file> [--out <path>]
   mrthemes validate <file>
@@ -108,7 +108,12 @@ function cmdGenerate(rest) {
   const dominant = opts.dominant;
   const neutral = opts.neutral;
   const pops = typeof opts.pops === 'string' ? opts.pops.split(',').map((s) => s.trim()).filter(Boolean) : [];
-  for (const h of [dominant, neutral, ...pops]) {
+  const paper = typeof opts.paper === 'string' ? opts.paper : undefined;
+  if (opts.contrast !== undefined && opts.contrast !== 'high') {
+    console.error('--contrast takes one value: high');
+    process.exit(1);
+  }
+  for (const h of [dominant, neutral, ...pops, ...(paper ? [paper] : [])]) {
     if (!HUES.includes(h)) {
       console.error(`Unknown hue "${h}". Run "mrthemes hues" to list valid hues.`);
       process.exit(1);
@@ -119,7 +124,7 @@ function cmdGenerate(rest) {
     id,
     name: opts.name,
     description: opts.description,
-    generator: { dominant, pops, neutral },
+    generator: { dominant, pops, neutral, paper, contrast: opts.contrast },
   });
   const themes = generateFamilyThemes(family);
   if (!themes.length) {
@@ -219,7 +224,7 @@ function cmdValidate(rest) {
   try {
     const { family, themes } = loadImport(file);
     console.log(`OK: ${file}`);
-    console.log(`  family: ${family ? `${family.name} (${family.id})${family.generator ? ` [generator: ${family.generator.dominant} / ${family.generator.pops.join(',')} / ${family.generator.neutral}]` : ''}` : 'none'}`);
+    console.log(`  family: ${family ? `${family.name} (${family.id})${family.generator ? ` [generator: ${family.generator.dominant} / ${family.generator.pops.join(',')} / ${family.generator.neutral}${family.generator.paper ? ` / paper ${family.generator.paper}` : ''}${family.generator.contrast ? ` / contrast ${family.generator.contrast}` : ''}]` : ''}` : 'none'}`);
     console.log(`  themes: ${themes.length}`);
     for (const t of themes) {
       const explicitCore = CORE_KEYS.filter((k) => t.colors[k] !== undefined);

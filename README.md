@@ -14,7 +14,7 @@ Visually orient between projects, each with a chosen look. Built for multitaskin
   <img alt="The Mr. Themes gallery: the theme each project uses, above the theme collection" src="screenshots/com.fireworklabs.theme-editor-0-dark.png">
 </picture>
 
-- 60 themes in ten families, light and dark, all checked for readable contrast
+- 120 themes in twenty families, light and dark, all checked for readable contrast, including cream-paper and high-contrast families
 - See and change which theme each project uses
 - Edit all 75 of the app's colors with a live preview (Nimbalyst's own themes can set 20)
 - Share themes as files, or have your agent design a family with the included Family Builder Kit
@@ -26,8 +26,16 @@ Visually orient between projects, each with a chosen look. Built for multitaskin
 In Nimbalyst's extension Marketplace, scroll to **Install from GitHub** and paste:
 
 ```
-https://github.com/Firework-Labs/nimbalyst-mr-themes
+https://github.com/MG007Raiser/nimbalyst-mr-themes
 ```
+
+This is the MG007Raiser fork. It keeps the original extension id, so your collection and settings carry over; uninstall the original first.
+
+## What's new in this fork
+
+- Fourteen more built-in families on top of the original six. Cyberpunk, Cobalt, Garnet, Matcha, Frost (arctic cyan), Nocturne (after-midnight purple), Bramble (retro green), Lavender (soft pastels), Arcade (neon pink), Dusk (sunset orange) and Pine (cool forest) are new in every variation. Parchment and Solar put their light themes on sepia and cream paper. Beacon is high contrast: text at 10:1 or more, accents and code at 7:1, borders at 3:1.
+- Families added in an update arrive in your collection once, without bringing back families you deleted.
+- The Family Builder Kit CLI runs on Windows and takes `--paper <hue>` and `--contrast high`.
 
 Goes well with [Mr. Projects](https://github.com/Firework-Labs/nimbalyst-mr-projects).
 

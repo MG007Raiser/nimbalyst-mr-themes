@@ -34,6 +34,10 @@ export interface FamilyGenerator {
   /** Up to four, most important first. */
   pops: Hue[];
   neutral: Hue;
+  /** Light surfaces tinted like paper with this hue (see FamilySpec.paper). */
+  paper?: Hue;
+  /** 'high' raises every contrast target (see FamilySpec.contrast). */
+  contrast?: 'high';
 }
 
 export interface ThemeFamily {
@@ -56,8 +60,36 @@ export const BUILTIN_FAMILIES: ThemeFamily[] = FAMILIES.map((f) => ({
   id: f.id,
   name: f.name,
   description: f.description,
-  generator: { dominant: f.dominant, pops: [...f.pops], neutral: f.neutral },
+  generator: {
+    dominant: f.dominant, pops: [...f.pops], neutral: f.neutral,
+    ...(f.paper ? { paper: f.paper } : {}), ...(f.contrast ? { contrast: f.contrast } : {}),
+  },
 }));
+
+/**
+ * The built-in families of upstream Mr. Themes 0.5.0. A collection seeded
+ * before builtinFamiliesSeen existed has seen these; every later built-in
+ * family is added to it once by addNewBuiltinsInto.
+ */
+export const LEGACY_BUILTIN_FAMILY_IDS = ['harbor', 'grove', 'plum', 'ember', 'rosewater', 'lagoon'];
+
+/**
+ * Add built-in families the user has never been offered, with their themes.
+ * Families already seen are left alone, so one the user deleted stays deleted
+ * (Restore built-ins brings it back). Returns the ids to record as seen.
+ */
+export function addNewBuiltinsInto(s: CollectionState, seen: string[]): { state: CollectionState; added: ThemeFamily[]; seen: string[] } {
+  const famIds = new Set(s.families.map((f) => f.id));
+  const themeIds = new Set(s.themes.map((t) => t.id));
+  const fresh = BUILTIN_FAMILIES.filter((f) => !seen.includes(f.id) && !famIds.has(f.id));
+  const freshIds = new Set(fresh.map((f) => f.id));
+  const themes = PRESETS.filter((p) => freshIds.has(p.family ?? '') && !themeIds.has(p.id));
+  return {
+    state: { themes: [...s.themes, ...themes], families: [...s.families, ...fresh.map((f) => ({ ...f }))] },
+    added: fresh,
+    seen: [...new Set([...seen, ...BUILTIN_FAMILIES.map((f) => f.id)])],
+  };
+}
 
 export function toFamilySpec(f: ThemeFamily): FamilySpec | null {
   if (!f.generator) return null;
@@ -91,6 +123,8 @@ export function normalizeFamily(input: unknown): ThemeFamily {
   if (g && typeof g === 'object' && isHue(g.dominant) && isHue(g.neutral)) {
     const pops = Array.isArray(g.pops) ? g.pops.filter(isHue).slice(0, 4) : [];
     out.generator = { dominant: g.dominant, pops, neutral: g.neutral };
+    if (isHue(g.paper)) out.generator.paper = g.paper;
+    if (g.contrast === 'high') out.generator.contrast = 'high';
   }
   return out;
 }

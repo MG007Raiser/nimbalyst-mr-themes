@@ -627,7 +627,21 @@ var FAMILIES = [
   { id: "plum", name: "Plum", description: "Late evening: violet over zinc.", dominant: "violet", pops: ["fuchsia", "pink", "sky", "amber"], neutral: "zinc" },
   { id: "ember", name: "Ember", description: "Banked fire: orange over stone.", dominant: "orange", pops: ["amber", "red", "yellow", "cyan"], neutral: "stone" },
   { id: "rosewater", name: "Rosewater", description: "Petals and paper: rose over neutral gray.", dominant: "rose", pops: ["pink", "fuchsia", "orange", "teal"], neutral: "neutral" },
-  { id: "lagoon", name: "Lagoon", description: "Still water: teal over cool gray.", dominant: "teal", pops: ["cyan", "emerald", "lime", "violet"], neutral: "gray" }
+  { id: "lagoon", name: "Lagoon", description: "Still water: teal over cool gray.", dominant: "teal", pops: ["cyan", "emerald", "lime", "violet"], neutral: "gray" },
+  { id: "cyberpunk", name: "Cyberpunk", description: "Neon on wet asphalt: fuchsia and cyan over zinc.", dominant: "fuchsia", pops: ["cyan", "violet", "yellow", "lime"], neutral: "zinc" },
+  { id: "cobalt", name: "Cobalt", description: "Deep water and brass: blue over cool gray.", dominant: "blue", pops: ["sky", "indigo", "amber", "emerald"], neutral: "gray" },
+  { id: "garnet", name: "Garnet", description: "Wine and walnut: red over neutral gray.", dominant: "red", pops: ["rose", "orange", "amber", "sky"], neutral: "neutral" },
+  { id: "matcha", name: "Matcha", description: "Whisked tea: lime over warm stone.", dominant: "lime", pops: ["emerald", "teal", "yellow", "amber"], neutral: "stone" },
+  { id: "parchment", name: "Parchment", description: "Old books and brown ink: yellow over warm stone on sepia paper.", dominant: "yellow", pops: ["orange", "teal", "rose", "emerald"], neutral: "stone", paper: "orange" },
+  { id: "solar", name: "Solar", description: "Warm accents on a cool base: amber over slate on cream paper.", dominant: "amber", pops: ["sky", "cyan", "violet", "rose"], neutral: "slate", paper: "amber" },
+  { id: "frost", name: "Frost", description: "Arctic light: cyan over slate.", dominant: "cyan", pops: ["blue", "violet", "emerald", "orange"], neutral: "slate" },
+  { id: "nocturne", name: "Nocturne", description: "After midnight: purple over slate with pink and cyan.", dominant: "purple", pops: ["pink", "cyan", "lime", "amber"], neutral: "slate" },
+  { id: "bramble", name: "Bramble", description: "Retro terminal: green over warm stone with amber and orange.", dominant: "green", pops: ["amber", "teal", "orange", "red"], neutral: "stone" },
+  { id: "lavender", name: "Lavender", description: "Soft pastels: indigo over slate.", dominant: "indigo", pops: ["pink", "sky", "emerald", "orange"], neutral: "slate" },
+  { id: "arcade", name: "Arcade", description: "Neon cabinet: pink over stone with lime, cyan and orange.", dominant: "pink", pops: ["lime", "cyan", "orange", "purple"], neutral: "stone" },
+  { id: "dusk", name: "Dusk", description: "Sunset over the city: orange over slate.", dominant: "orange", pops: ["pink", "violet", "amber", "sky"], neutral: "slate" },
+  { id: "pine", name: "Pine", description: "Cool forest: emerald over slate.", dominant: "emerald", pops: ["teal", "lime", "amber", "sky"], neutral: "slate" },
+  { id: "beacon", name: "Beacon", description: "High contrast for low vision and bright rooms: blue over neutral gray.", dominant: "blue", pops: ["sky", "violet", "orange", "pink"], neutral: "neutral", contrast: "high" }
 ];
 var VARIATION_BLURB = {
   subtle: "Near monochrome, soft contrast, tinted pops.",
@@ -645,6 +659,18 @@ var TARGET = {
   statusUnderWhite: 3,
   code: 4.5,
   comment: 3.5
+};
+var TARGET_HIGH = {
+  text: 10,
+  muted: 7,
+  faint: 7,
+  disabled: 3,
+  accent: 7,
+  link: 7,
+  status: 5.5,
+  statusUnderWhite: 3,
+  code: 7,
+  comment: 4.5
 };
 var PURPLISH = ["violet", "purple", "fuchsia", "indigo", "pink"];
 var CYANISH = ["cyan", "teal", "sky"];
@@ -669,7 +695,7 @@ function verified(mixed, hue, start, bgs, min, dark) {
   }
   return walk(hue, start, bgs, min, dark);
 }
-function dual(hue, bg, dark) {
+function dual(hue, bg, dark, t = TARGET) {
   const fine = [];
   const from = idx(300);
   const to = idx(800);
@@ -683,8 +709,8 @@ function dual(hue, bg, dark) {
   let best = tw(hue, dark ? 500 : 600);
   let bestScore = -1;
   for (const c of order) {
-    const onBg = contrastRatio(c, bg) / TARGET.status;
-    const under = contrastRatio(WHITE, c) / TARGET.statusUnderWhite;
+    const onBg = contrastRatio(c, bg) / t.status;
+    const under = contrastRatio(WHITE, c) / t.statusUnderWhite;
     if (onBg >= 1.02 && under >= 1.02) return c;
     const score = Math.min(onBg, under);
     if (score > bestScore) {
@@ -694,10 +720,10 @@ function dual(hue, bg, dark) {
   }
   return best;
 }
-function matte(c, neutral, amount, bg) {
+function matte(c, neutral, amount, bg, t = TARGET) {
   for (let a = amount; a > 0.04; a -= 0.08) {
     const m = mix(c, neutral, a);
-    if (contrastRatio(m, bg) >= TARGET.status && contrastRatio(WHITE, m) >= TARGET.statusUnderWhite) return m;
+    if (contrastRatio(m, bg) >= t.status && contrastRatio(WHITE, m) >= t.statusUnderWhite) return m;
   }
   return c;
 }
@@ -708,6 +734,47 @@ function nextShade(hue, from, dark) {
   return tw(hue, SHADES[j]);
 }
 function character(f, dark, v) {
+  const ch = baseCharacter(f, dark, v);
+  if (!dark && f.paper) Object.assign(ch, paperSurfaces(f.neutral, f.paper, v));
+  if (f.contrast === "high") {
+    const end = dark ? BLACK : WHITE;
+    ch.bg = mix(ch.bg, end, dark ? 0.45 : 0.6);
+    ch.bg2 = mix(ch.bg2, end, dark ? 0.45 : 0.6);
+    ch.bg3 = mix(ch.bg3, end, dark ? 0.3 : 0.4);
+    ch.border = walk(f.neutral, dark ? 700 : 300, [ch.bg, ch.bg2], 3, dark);
+    ch.hover = dark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.07)";
+    ch.selectedAlpha += 0.08;
+  }
+  return ch;
+}
+function paperSurfaces(n, p, v) {
+  if (v === "subtle") {
+    return {
+      bg: mix(tw(n, 200), tw(p, 100), 0.45),
+      bg2: mix(tw(n, 300), tw(p, 100), 0.4),
+      bg3: mix(tw(n, 300), tw(p, 200), 0.45),
+      border: mix(tw(n, 300), tw(p, 200), 0.5),
+      active: mix(tw(n, 300), tw(p, 200), 0.6)
+    };
+  }
+  if (v === "pigment") {
+    return {
+      bg: mix(tw(n, 100), tw(p, 100), 0.6),
+      bg2: mix(tw(n, 200), tw(p, 100), 0.5),
+      bg3: mix(tw(n, 200), tw(p, 200), 0.55),
+      border: mix(tw(n, 300), tw(p, 200), 0.55),
+      active: mix(tw(n, 300), tw(p, 200), 0.65)
+    };
+  }
+  return {
+    bg: mix(WHITE, tw(p, 50), 0.8),
+    bg2: mix(WHITE, tw(p, 100), 0.45),
+    bg3: mix(tw(n, 100), tw(p, 100), 0.6),
+    border: mix(tw(n, 200), tw(p, 200), 0.5),
+    active: mix(tw(n, 200), tw(p, 200), 0.7)
+  };
+}
+function baseCharacter(f, dark, v) {
   const n = f.neutral;
   const d = f.dominant;
   if (dark) {
@@ -830,13 +897,14 @@ function buildTheme(f, faction, variation) {
   const d = f.dominant;
   const pop = (i) => f.pops[i] ?? f.pops[f.pops.length - 1] ?? d;
   const ch = character(f, dark, variation);
+  const T = f.contrast === "high" ? TARGET_HIGH : TARGET;
   const surfaces = [ch.bg, ch.bg2, ch.bg3];
   const tinted = (hue, shade, bgs, min) => verified(mix(tw(hue, shade), tw(n, shade), ch.popMix), hue, shade, bgs, min, dark);
-  const text = verified(ch.text, n, dark ? 100 : 900, surfaces, TARGET.text, dark);
-  const muted = verified(ch.muted, n, dark ? 300 : 600, surfaces, TARGET.muted, dark);
-  const faint = verified(ch.faint, n, dark ? 400 : 500, surfaces, TARGET.faint, dark);
-  const disabled = verified(ch.disabled, n, dark ? 600 : 400, [ch.bg], TARGET.disabled, dark);
-  let primary = verified(mix(tw(d, ch.accentShade), tw(n, ch.accentShade), ch.accentMix), d, ch.accentShade, surfaces, TARGET.accent, dark);
+  const text = verified(ch.text, n, dark ? 100 : 900, surfaces, T.text, dark);
+  const muted = verified(ch.muted, n, dark ? 300 : 600, surfaces, T.muted, dark);
+  const faint = verified(ch.faint, n, dark ? 400 : 500, surfaces, T.faint, dark);
+  const disabled = verified(ch.disabled, n, dark ? 600 : 400, [ch.bg], T.disabled, dark);
+  let primary = verified(mix(tw(d, ch.accentShade), tw(n, ch.accentShade), ch.accentMix), d, ch.accentShade, surfaces, T.accent, dark);
   let onPrimary = onColor(primary);
   for (let i = 0; i < 3 && contrastRatio(onPrimary, primary) < 4.5; i++) {
     primary = nextShade(d, primary, dark);
@@ -845,13 +913,13 @@ function buildTheme(f, faction, variation) {
   const primaryHover = variation === "subtle" ? mix(primary, text, 0.15) : nextShade(d, primary, dark);
   const linkHue = variation === "subtle" ? d : pop(0);
   const linkShade = dark ? 300 : 600;
-  const link = tinted(linkHue, linkShade, surfaces, TARGET.link);
+  const link = tinted(linkHue, linkShade, surfaces, T.link);
   const linkHover = mix(link, dark ? WHITE : BLACK, 0.15);
   const infoHue = variation === "subtle" ? d : pop(1);
-  const info = matte(dual(infoHue, ch.bg, dark), tw(n, 500), ch.statusMatte, ch.bg);
-  const success = matte(dual(f.pops.includes("lime") && variation === "juicy" ? "lime" : "emerald", ch.bg, dark), tw(n, 500), ch.statusMatte, ch.bg);
-  const warning = matte(dual("amber", ch.bg, dark), tw(n, 500), ch.statusMatte, ch.bg);
-  const error = matte(dual(d === "rose" || d === "red" ? "orange" : "red", ch.bg, dark), tw(n, 500), ch.statusMatte, ch.bg);
+  const info = matte(dual(infoHue, ch.bg, dark, T), tw(n, 500), ch.statusMatte, ch.bg, T);
+  const success = matte(dual(f.pops.includes("lime") && variation === "juicy" ? "lime" : "emerald", ch.bg, dark, T), tw(n, 500), ch.statusMatte, ch.bg, T);
+  const warning = matte(dual("amber", ch.bg, dark, T), tw(n, 500), ch.statusMatte, ch.bg, T);
+  const error = matte(dual(d === "rose" || d === "red" ? "orange" : "red", ch.bg, dark, T), tw(n, 500), ch.statusMatte, ch.bg, T);
   const colors = {
     bg: ch.bg,
     "bg-secondary": ch.bg2,
@@ -880,30 +948,30 @@ function buildTheme(f, faction, variation) {
   const cyanHue = f.pops.find((p) => CYANISH.includes(p)) ?? "cyan";
   const extended = {
     "on-primary": onPrimary,
-    purple: tinted(purpleHue, dark ? 400 : 600, surfaces, TARGET.accent),
-    "code-selector": tinted(d, codeShade, codeBgs, TARGET.code),
-    "code-function": tinted(pop(0), codeShade, codeBgs, TARGET.code),
-    "code-attr": tinted(pop(1), codeShade, codeBgs, TARGET.code),
-    "code-variable": tinted(pop(2), codeShade, codeBgs, TARGET.code),
-    "code-property": tinted(pop(3), codeShade, codeBgs, TARGET.code),
-    "code-comment": walk(n, 500, codeBgs, TARGET.comment, dark),
-    "code-punctuation": walk(n, dark ? 400 : 600, codeBgs, TARGET.code, dark),
+    purple: tinted(purpleHue, dark ? 400 : 600, surfaces, T.accent),
+    "code-selector": tinted(d, codeShade, codeBgs, T.code),
+    "code-function": tinted(pop(0), codeShade, codeBgs, T.code),
+    "code-attr": tinted(pop(1), codeShade, codeBgs, T.code),
+    "code-variable": tinted(pop(2), codeShade, codeBgs, T.code),
+    "code-property": tinted(pop(3), codeShade, codeBgs, T.code),
+    "code-comment": walk(n, 500, codeBgs, T.comment, dark),
+    "code-punctuation": walk(n, dark ? 400 : 600, codeBgs, T.code, dark),
     "code-operator": muted,
     "code-text": text
   };
-  extended["terminal-ansi-magenta"] = tinted(purpleHue, dark ? 400 : 600, [ch.bg2], TARGET.code);
-  extended["terminal-ansi-cyan"] = tinted(cyanHue, dark ? 400 : 600, [ch.bg2], TARGET.code);
+  extended["terminal-ansi-magenta"] = tinted(purpleHue, dark ? 400 : 600, [ch.bg2], T.code);
+  extended["terminal-ansi-cyan"] = tinted(cyanHue, dark ? 400 : 600, [ch.bg2], T.code);
   if (variation === "subtle") {
-    extended["code-variable"] = tinted(d, codeShade, codeBgs, TARGET.code);
-    extended["code-property"] = tinted(pop(0), codeShade, codeBgs, TARGET.code);
-    extended["code-attr"] = verified(mix(tw(n, dark ? 300 : 700), tw(d, codeShade), 0.35), n, dark ? 300 : 700, codeBgs, TARGET.code, dark);
+    extended["code-variable"] = tinted(d, codeShade, codeBgs, T.code);
+    extended["code-property"] = tinted(pop(0), codeShade, codeBgs, T.code);
+    extended["code-attr"] = verified(mix(tw(n, dark ? 300 : 700), tw(d, codeShade), 0.35), n, dark ? 300 : 700, codeBgs, T.code, dark);
   }
   if (variation === "juicy") {
-    extended["terminal-ansi-magenta"] = walk(purpleHue, dark ? 400 : 600, [ch.bg2], TARGET.code, dark);
-    extended["terminal-ansi-cyan"] = walk(cyanHue, dark ? 400 : 600, [ch.bg2], TARGET.code, dark);
+    extended["terminal-ansi-magenta"] = walk(purpleHue, dark ? 400 : 600, [ch.bg2], T.code, dark);
+    extended["terminal-ansi-cyan"] = walk(cyanHue, dark ? 400 : 600, [ch.bg2], T.code, dark);
     extended["terminal-ansi-blue"] = primary;
-    extended["terminal-ansi-bright-magenta"] = walk(purpleHue, dark ? 300 : 700, [ch.bg2], TARGET.code, dark);
-    extended["terminal-ansi-bright-cyan"] = walk(cyanHue, dark ? 300 : 700, [ch.bg2], TARGET.code, dark);
+    extended["terminal-ansi-bright-magenta"] = walk(purpleHue, dark ? 300 : 700, [ch.bg2], T.code, dark);
+    extended["terminal-ansi-bright-cyan"] = walk(cyanHue, dark ? 300 : 700, [ch.bg2], T.code, dark);
     extended["terminal-cursor"] = primary;
     const hl = pop(3);
     extended["highlight-bg"] = withAlpha(tw(hl, 400), 0.28);
@@ -920,7 +988,7 @@ function buildTheme(f, faction, variation) {
     author: "Mr. Themes",
     description: `${f.description} ${VARIATION_BLURB[variation]}`,
     isDark: dark,
-    tags: [faction, variation, f.id, f.dominant, ...f.pops],
+    tags: [faction, variation, f.id, f.dominant, ...f.pops, ...f.contrast === "high" ? ["high-contrast"] : []],
     family: f.id,
     faction,
     variation,
@@ -956,7 +1024,13 @@ var BUILTIN_FAMILIES = FAMILIES.map((f) => ({
   id: f.id,
   name: f.name,
   description: f.description,
-  generator: { dominant: f.dominant, pops: [...f.pops], neutral: f.neutral }
+  generator: {
+    dominant: f.dominant,
+    pops: [...f.pops],
+    neutral: f.neutral,
+    ...f.paper ? { paper: f.paper } : {},
+    ...f.contrast ? { contrast: f.contrast } : {}
+  }
 }));
 function toFamilySpec(f) {
   if (!f.generator) return null;
@@ -986,6 +1060,8 @@ function normalizeFamily(input) {
   if (g && typeof g === "object" && isHue(g.dominant) && isHue(g.neutral)) {
     const pops = Array.isArray(g.pops) ? g.pops.filter(isHue).slice(0, 4) : [];
     out.generator = { dominant: g.dominant, pops, neutral: g.neutral };
+    if (isHue(g.paper)) out.generator.paper = g.paper;
+    if (g.contrast === "high") out.generator.contrast = "high";
   }
   return out;
 }

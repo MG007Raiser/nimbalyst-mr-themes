@@ -2,7 +2,7 @@
   "id": "com.fireworklabs.theme-editor",
   "name": "Mr. Themes",
   "version": "0.5.1",
-  "description": "Every project gets its own theme. Best buds with Mr. Projects. Create, preview, save, share, and apply Nimbalyst color themes, globally or per project. Ships with ten theme families: 60 contrast-checked presets built on the Tailwind palette.",
+  "description": "Every project gets its own theme. Best buds with Mr. Projects. Create, preview, save, share, and apply Nimbalyst color themes, globally or per project. Ships with twenty theme families: 120 contrast-checked presets built on the Tailwind palette, including cream-paper and high-contrast families.",
   "author": "Firework Labs",
   "main": "dist/index.js",
   "apiVersion": "1.0.0",
@@ -72,12 +72,18 @@
           "default": 0,
           "description": "Set to 1 once the built-in themes and families have been copied into the collection.",
           "scope": "user"
+        },
+        "builtinFamiliesSeen": {
+          "type": "array",
+          "default": [],
+          "description": "Ids of the built-in families already offered to this collection, so a family added in an update arrives once. Managed by the Theme Gallery.",
+          "scope": "user"
         }
       }
     }
   },
   "marketplace": {
-    "changelog": "0.5.0: Card menus, grouping-only New family wizard with five header colors, separate Import theme and Import family, Download Family Builder Kit for Agents, Cancel in the theme editor; tray pickers fixed for long collections.\n0.4.0: Theme Collection and user theme families; every built-in theme can be edited and deleted; Restore built-ins; family export; terminal colors contrast-checked in every variation.\n0.3.0: Renamed from Nimbalyst Theme Editor; new gutter icon and help tooltip.",
+    "changelog": "0.6.0: Ten new built-in families (Parchment, Solar, Frost, Nocturne, Bramble, Lavender, Arcade, Dusk, Pine, Beacon), 120 presets; paper and high-contrast generator options, also in the Family Builder Kit CLI; existing collections receive new built-in families once, without bringing back deleted ones.\n0.5.0: Card menus, grouping-only New family wizard with five header colors, separate Import theme and Import family, Download Family Builder Kit for Agents, Cancel in the theme editor; tray pickers fixed for long collections.\n0.4.0: Theme Collection and user theme families; every built-in theme can be edited and deleted; Restore built-ins; family export; terminal colors contrast-checked in every variation.\n0.3.0: Renamed from Nimbalyst Theme Editor; new gutter icon and help tooltip.",
     "categories": [
       "developer-tools"
     ],
@@ -93,7 +99,7 @@
     ],
     "icon": "palette",
     "tagline": "Every project gets its own theme. Best buds with Mr. Projects.",
-    "longDescription": "Create, preview, share and apply Nimbalyst color themes, globally or per project. Mr. Themes ships with ten theme families of six themes each (light and dark, in subtle, pigment and juicy variations): 60 presets whose contrast is checked by a generator, not by hand. With Mr. Projects installed, the Theme Gallery shows which theme every open project uses and lets you change it in one click; the Theme Collection holds every theme you own, and Theme Families groups them. Edit any .nimtheme file with all 75 Nimbalyst colors, live previews and a 17-check contrast audit that can fix failing colors for you. Want a family of your own? Download the Family Builder Kit for Agents into a project and ask your agent to design, audit and preview one, then import it.\n\nHeads-up: Mr. Themes relies on Nimbalyst behavior that is not part of the extension SDK. It applies themes by writing all 75 of Nimbalyst's color variables onto the app window and watching Nimbalyst's data-theme attribute, and it restyles its own gutter button. A Nimbalyst update can make themes apply only partly, or bring back the default gutter icon, until Mr. Themes is updated. Disabling or uninstalling it returns Nimbalyst to its own theme.",
+    "longDescription": "Create, preview, share and apply Nimbalyst color themes, globally or per project. Mr. Themes ships with twenty theme families of six themes each (light and dark, in subtle, pigment and juicy variations): 120 presets whose contrast is checked by a generator, not by hand. Parchment and Solar put their light themes on sepia and cream paper; Beacon raises every contrast target for low vision and bright rooms. With Mr. Projects installed, the Theme Gallery shows which theme every open project uses and lets you change it in one click; the Theme Collection holds every theme you own, and Theme Families groups them. Edit any .nimtheme file with all 75 Nimbalyst colors, live previews and a 17-check contrast audit that can fix failing colors for you. Want a family of your own? Download the Family Builder Kit for Agents into a project and ask your agent to design, audit and preview one, then import it.\n\nHeads-up: Mr. Themes relies on Nimbalyst behavior that is not part of the extension SDK. It applies themes by writing all 75 of Nimbalyst's color variables onto the app window and watching Nimbalyst's data-theme attribute, and it restyles its own gutter button. A Nimbalyst update can make themes apply only partly, or bring back the default gutter icon, until Mr. Themes is updated. Disabling or uninstalling it returns Nimbalyst to its own theme.",
     "screenshots": [
       {
         "alt": "Theme Gallery with the Theme usage tray showing the global theme and each open project's theme, above the Theme Collection",
@@ -112,7 +118,7 @@
       }
     ],
     "highlights": [
-      "Six theme families × light and dark × subtle, pigment, juicy: 36 presets",
+      "Twenty theme families × light and dark × subtle, pigment, juicy: 120 presets",
       "Edit all 75 theme colors, not just the 20 the manifest exposes",
       "Contrast audit and one-click repair, three UI previews, and Try live",
       "Share as a .nimtheme file, JSON, or an installable theme extension",

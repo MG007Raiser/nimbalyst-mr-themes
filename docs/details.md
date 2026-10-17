@@ -14,12 +14,14 @@ Companion: [Mr. Projects](https://github.com/Firework-Labs/nimbalyst-mr-projects
 - **Import theme** (Theme Collection) takes one `.nimtheme`; **Import family** (Theme Families) takes one `.nimfamily` (below). Each refuses the other kind with a pointer to the right button. File picker, drop, or paste. When ids already exist it offers Replace (keeps project assignments; the loop when iterating with the kit) or Import as copies. Families export as `.nimfamily`.
 - **Download Family Builder Kit for Agents** writes `mr-themes-family-builder-kit/` into the current project (no save dialog in the extension API): the agent guide, reference inventory, templates, prebuilt library, CLI and preview pages from `toolkit/`. The kit is bundled as text (`src/kit.ts`, from `kit/`, refreshed by `npm run sync-kit`, which `npm run build` runs first); it adds about 330 KB to `dist/index.js`.
 - **Theme Gallery** (fullscreen; the gutter button reads as Mr. Themes: icon from `graphic-assets/Theme-v2.svg` inlined in `src/themeIcon.ts`, and on hover Nimbalyst's big help tooltip with the one-line description, rebuilt in `src/helpTooltip.ts` because the host only offers it to its own buttons. The panel exports the SDK's `gutterButton`, and because Nimbalyst 0.77.5 kept its default button on a dev reinstall, the `GutterIcon` host component also dresses the host's button: swaps the symbol, drops the native title, attaches the tooltip). Choosing a theme here uses it **globally**, in every project. Under the header, a full-width **assignment tray** lists the Nimbalyst Global Theme first, then every open project in rail order (when Mr. Projects is installed), each with its theme thumbnail. A project that follows the global theme says so and shows the global thumbnail. Each tray card has a picker to set that scope's theme; every gallery card has "Use globally" and "Use for project…". Cards are tagged with what uses them: `Global` and/or the project names.
-- **Six theme families**, each a dominant Tailwind hue with up to four pop hues and a neutral ladder. Every family has two factions (light, dark) and each faction three variations:
+- **Twenty theme families**, each a dominant Tailwind hue with up to four pop hues and a neutral ladder. Every family has two factions (light, dark) and each faction three variations:
   - **Subtle** verges on monochrome. Surfaces sit mid-ladder (blacks are not very black, whites not very white), the accent is desaturated, pops appear only as low-saturation tints, and contrast stays at the lower end of what passes.
   - **Pigment** is deeper and more saturated, like ink on matte paper: tinted surfaces, darker darks and brighter brights than subtle, status colors pulled slightly toward the neutral.
   - **Juicy** uses bright saturated accents and pops, deep blacks and color-tinted off-blacks, bright whites and color-tinted off-whites, with pops in links, info, purple, code, terminal, highlights, and selection.
+  - **Paper** (optional, per family): the light faction sits on surfaces tinted with a paper hue instead of near-white. Parchment uses orange (sepia), Solar amber (cream).
+  - **High contrast** (optional, per family): every target rises (text 10:1, muted, faint, accents, links and code 7:1, status 5.5:1) and borders reach 3:1. Beacon uses it.
   - The Tailwind samples are a starting point, not a constraint: the generator mixes toward the neutral or toward black/white to reach each character, then verifies contrast.
-- **Contrast audit** in every editor footer: 17 checks covering text on each surface, links, accent, status colors as text and as pill fills under white text. "All checks" lists them; "Fix contrast" nudges failing colors until they pass. All 36 presets pass every check.
+- **Contrast audit** in every editor footer: 17 checks covering text on each surface, links, accent, status colors as text and as pill fills under white text. "All checks" lists them; "Fix contrast" nudges failing colors until they pass. All 120 presets pass every check.
 - **Theme Editor** for `*.nimtheme` files: all 75 theme colors grouped, derived colors that follow the core palette, three preview screens, Try live, and Add to library.
 - **Capture current**, **Import** from JSON, **Export** as JSON, as a `.nimtheme` file, or as a manifest-only theme extension.
 
@@ -110,7 +112,7 @@ Offline checks, no app needed:
 
 ```bash
 npm test             # tests/collection.test.ts: import formats, family wizard, delete, restore, seeding
-npm run audit        # scripts/audit-presets.ts: 17-check contrast audit of all 36 presets
+npm run audit        # scripts/audit-presets.ts: 17-check contrast audit of all 120 presets
 ```
 
 ## Repository layout

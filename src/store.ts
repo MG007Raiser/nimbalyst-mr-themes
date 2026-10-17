@@ -7,7 +7,7 @@
  * configuration service is slow or unavailable.
  */
 import type { ExtensionContext } from '@nimbalyst/extension-sdk';
-import { BUILTIN_FAMILIES, normalizeFamily, type ThemeFamily } from './collection';
+import { BUILTIN_FAMILIES, LEGACY_BUILTIN_FAMILY_IDS, addNewBuiltinsInto, normalizeFamily, type ThemeFamily } from './collection';
 import { PRESETS } from './presets';
 import { normalizeTheme, type ThemeFile } from './themeSpec';
 
@@ -17,6 +17,7 @@ const KEY_ENABLED = 'enabledTheme';
 const KEY_USER_THEMES = 'userThemes';
 const KEY_FAMILIES = 'themeFamilies';
 const KEY_SEEDED = 'collectionSeeded';
+const KEY_BUILTINS_SEEN = 'builtinFamiliesSeen';
 
 let ctx: ExtensionContext | null = null;
 
@@ -126,9 +127,32 @@ export async function setCollection(themes: ThemeFile[], families?: ThemeFamily[
   await cfgSet(KEY_SEEDED, 1);
 }
 
-/** Write the seeded collection once, so later reads come from storage. */
+/**
+ * Write the seeded collection once, so later reads come from storage. On
+ * later runs, add built-in families that shipped after the collection was
+ * seeded (each one once; see addNewBuiltinsInto).
+ */
 export async function ensureSeeded(): Promise<void> {
-  if (!isSeeded()) await setCollection(getCollection(), getFamilies());
+  const allIds = BUILTIN_FAMILIES.map((f) => f.id);
+  if (!isSeeded()) {
+    await setCollection(getCollection(), getFamilies());
+    await setBuiltinsSeen(allIds);
+    return;
+  }
+  const stored = cfgGet<string[]>(KEY_BUILTINS_SEEN) ?? lsGet<string[]>(KEY_BUILTINS_SEEN);
+  const seen = Array.isArray(stored) ? stored : LEGACY_BUILTIN_FAMILY_IDS;
+  if (allIds.every((id) => seen.includes(id))) return;
+  const r = addNewBuiltinsInto({ themes: getCollection(), families: getFamilies() }, seen);
+  if (r.added.length) {
+    await setCollection(r.state.themes, r.state.families);
+    toast('info', `Mr. Themes added ${r.added.length} new theme ${r.added.length === 1 ? 'family' : 'families'}: ${r.added.map((f) => f.name).join(', ')}.`);
+  }
+  await setBuiltinsSeen(r.seen);
+}
+
+async function setBuiltinsSeen(ids: string[]): Promise<void> {
+  lsSet(KEY_BUILTINS_SEEN, ids);
+  await cfgSet(KEY_BUILTINS_SEEN, ids);
 }
 
 export function toast(kind: 'info' | 'warning' | 'error', message: string): void {
