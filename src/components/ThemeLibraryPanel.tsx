@@ -16,11 +16,12 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { copyToClipboard, type PanelHostProps } from '@nimbalyst/extension-sdk';
 import { applier } from '../applier';
 import {
-  FAMILY_SWATCH_COUNT, cycleList, deleteFamilyFrom, familyHeaderColors, importInto, missingBuiltins, parseFamilyImport, parseThemeImport, restoreBuiltinsInto,
+  FAMILY_SWATCH_COUNT, cycleList, generateFamilyThemes, deleteFamilyFrom, familyHeaderColors, importInto, missingBuiltins, parseFamilyImport, parseThemeImport, restoreBuiltinsInto,
   saveFamilyInto, serializeFamilyFile, setThemeFamily, stepTheme, suggestedSwatches, uniqueSlug,
   type CycleScope, type FamilyForm, type ImportPayload, type ThemeFamily,
 } from '../collection';
 import { isValidColor, toHex, parseColor } from '../color';
+import { familyFromPalette, paletteFromPixels, type Swatch } from '../fromImage';
 import { KIT_DIR, KIT_FILES } from '../kit';
 import { LEGACY_PRESET_IDS, isPresetId } from '../presets';
 import { getProjectBridge, type ProjectInfo, type ProjectThemeBridge } from '../projectBridge';
@@ -45,7 +46,8 @@ type Modal =
   | { kind: 'exportFamily'; family: ThemeFamily }
   | { kind: 'deleteTheme'; theme: ThemeFile }
   | { kind: 'deleteFamily'; family: ThemeFamily }
-  | { kind: 'family'; family: ThemeFamily | null };
+  | { kind: 'family'; family: ThemeFamily | null }
+  | { kind: 'fromImage' };
 
 const GLOBAL_LABEL = 'Nimbalyst Global Theme';
 
@@ -714,6 +716,7 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
                 <Button icon="restore" onClick={() => void restoreBuiltins()} title={`Bring back ${missing.themes.length} deleted built-in theme(s) and ${missing.families.length} famil(ies)`}>Restore built-ins</Button>
               ) : null}
               <Button icon="smart_toy" onClick={() => void downloadKit()} title={`Write the kit an agent uses to design a theme family (guide, previews, checks) into ${KIT_DIR}/ in this project`}>Download Family Builder Kit for Agents</Button>
+              <Button icon="image" onClick={() => setModal({ kind: 'fromImage' })} title="Build a light and dark family from the colors of a picture">Family from image</Button>
               <Button icon="download" onClick={() => setModal({ kind: 'importFamily' })} title="Import a theme family and its themes from a .nimfamily file">Import family</Button>
               <Button variant="primary" icon="add" onClick={() => setModal({ kind: 'family', family: null })} title="Group themes from the collection into a new family">New family</Button>
             </div>
@@ -822,6 +825,9 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
           />
         );
       })() : null}
+      {modal?.kind === 'fromImage' ? (
+        <ImageFamilyModal onClose={() => setModal(null)} onAdd={(payload) => void importPayload(payload, 'copy')} />
+      ) : null}
       {modal?.kind === 'family' ? (
         <FamilyModal family={modal.family} themes={themes} families={families} onClose={() => setModal(null)} onSave={(form) => void saveFamily(form, modal.family)} />
       ) : null}
@@ -1030,6 +1036,137 @@ function ImportModal({ what, themeIds, familyIds, onClose, onImport }: {
       <div className="nte-row" style={{ justifyContent: 'flex-end', marginTop: 12 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button variant="primary" icon="download" disabled={!payload} onClick={() => payload && onImport(payload, hasClash ? mode : 'copy')}>Import</Button>
+      </div>
+    </ModalShell>
+  );
+}
+
+/** Longest side, in pixels, an image is scaled to before its colors are read. */
+const IMAGE_SAMPLE = 96;
+
+/** Decode an image file and read its palette from a small canvas copy. */
+async function paletteFromFile(file: File): Promise<{ url: string; swatches: Swatch[] }> {
+  const url = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error ?? new Error('could not read the file'));
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('not an image this app can open'));
+    el.src = url;
+  });
+  const scale = Math.min(1, IMAGE_SAMPLE / Math.max(img.naturalWidth, img.naturalHeight, 1));
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const g = canvas.getContext('2d');
+  if (!g) throw new Error('canvas unavailable');
+  g.drawImage(img, 0, 0, w, h);
+  return { url, swatches: paletteFromPixels(g.getImageData(0, 0, w, h).data) };
+}
+
+/** Family name from a file name: "goku_vs_vegeta.png" becomes "Goku Vs Vegeta". */
+function nameFromFile(fileName: string): string {
+  const base = fileName.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+  return base ? base.replace(/\b\w/g, (m) => m.toUpperCase()).slice(0, 40) : 'From image';
+}
+
+/**
+ * Family from image: pick, drop or paste a picture; its main colors become a
+ * generator family with those exact colors pinned as its signature, previewed
+ * as six themes before it is added.
+ */
+function ImageFamilyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: ImportPayload) => void }) {
+  const [image, setImage] = useState<{ url: string; fileName: string; swatches: Swatch[] } | null>(null);
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const load = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError(`${file.name} is not an image.`);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const { url, swatches } = await paletteFromFile(file);
+      setImage({ url, fileName: file.name || 'pasted image', swatches });
+      setName((n) => n || nameFromFile(file.name || ''));
+    } catch (e) {
+      setError(`Could not read ${file.name || 'the image'}: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const built = useMemo<{ payload: ImportPayload | null; error: string | null }>(() => {
+    if (!image) return { payload: null, error: null };
+    try {
+      const family = familyFromPalette(image.swatches, name, `Made from ${image.fileName}.`);
+      return { payload: { family, themes: generateFamilyThemes(family) }, error: null };
+    } catch (e) {
+      return { payload: null, error: (e as Error).message };
+    }
+  }, [image, name]);
+
+  const onPaste = (e: { clipboardData: DataTransfer; preventDefault(): void }) => {
+    const f = [...e.clipboardData.files].find((x) => x.type.startsWith('image/'));
+    if (f) {
+      e.preventDefault();
+      void load(f);
+    }
+  };
+
+  return (
+    <ModalShell onClose={onClose} wide>
+      <div onPaste={onPaste}>
+        <h3>Family from image</h3>
+        <p className="nte-muted" style={{ marginTop: 0 }}>
+          Pick a picture: a poster, a screenshot, a character, a photo. Its main colors become a light and dark theme family, three variations each, with every color checked for readable contrast. Choose a file, drop it here, or paste it.
+        </p>
+        <div
+          className={`nte-dropzone${dragging ? ' over' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); void load(e.dataTransfer.files?.[0]); }}
+        >
+          {image ? <img src={image.url} alt="" className="nte-imgthumb" /> : <Icon name="image" size={22} />}
+          <span className="nte-grow">{busy ? 'Reading colors…' : image ? <b>{image.fileName}</b> : 'Drop an image (PNG, JPG, GIF, WebP)'}</span>
+          <Button onClick={() => fileRef.current?.click()}>{image ? 'Choose another…' : 'Choose image…'}</Button>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { void load(e.target.files?.[0]); e.target.value = ''; }} />
+        </div>
+        {image ? (
+          <div className="nte-imgpalette" title="The image's main colors, most common first">
+            {image.swatches.map((sw) => <i key={sw.hex} style={{ background: sw.hex, flexGrow: Math.max(sw.weight, 0.04) }} title={`${sw.hex} · ${Math.round(sw.weight * 100)}%`} />)}
+          </div>
+        ) : null}
+        {error || built.error ? <div className="nte-importstatus err"><Icon name="error" size={16} />{error ?? built.error}</div> : null}
+        {built.payload ? (
+          <>
+            <label className="nte-imgname">
+              <span className="nte-muted">Family name</span>
+              <input className="nte-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="From image" maxLength={40} />
+            </label>
+            <div className="nte-importstatus ok">
+              <Icon name="check_circle" size={16} />
+              <span><b>{built.payload.family!.name}</b>: 6 themes, light and dark</span>
+              <span className="nte-importthumbs">{built.payload.themes.map((t) => <ThemeThumb key={t.id} theme={t} />)}</span>
+            </div>
+          </>
+        ) : null}
+        <div className="nte-row" style={{ justifyContent: 'flex-end', marginTop: 12 }}>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" icon="add" disabled={!built.payload} onClick={() => built.payload && onAdd(built.payload)}>Add family</Button>
+        </div>
       </div>
     </ModalShell>
   );

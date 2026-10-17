@@ -124,4 +124,28 @@ assert.ok(members('power-level').every((t: any) => contrastRatio(t.colors.primar
 const sigFam = C.normalizeFamily({ name: 'S', generator: { dominant: 'blue', pops: ['red'], neutral: 'gray', signature: { primary: '#123456', pops: ['#ff0000', 'nope', '#00ff00'], night: 'bad', day: '#eeeeee' } } });
 assert.deepEqual(sigFam.generator?.signature, { primary: '#123456', day: '#eeeeee', pops: ['#ff0000', '', '#00ff00'] }); ok('signature: family files keep valid colors and slot positions');
 assert.equal(C.generateFamilyThemes(sigFam).flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('signature: an imported signature family passes the audit');
+// family from an image
+const { paletteFromPixels, familyFromPalette, nearestHue } = await import('../src/fromImage');
+const img = (parts: [string, number][]) => {
+  const px: number[] = [];
+  for (const [hex, count] of parts) {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    for (let i = 0; i < count; i++) px.push(c[0], c[1], c[2], 255);
+  }
+  return px;
+};
+const mechaPx = img([['#f2f2f2', 400], ['#1e50a2', 250], ['#d0202e', 150], ['#f6c200', 100], ['#0c1a33', 100]]);
+const pal = paletteFromPixels(mechaPx);
+assert.equal(pal.length, 5); assert.equal(pal[0].hex, '#f2f2f2'); assert.ok(Math.abs(pal[0].weight - 0.4) < 1e-9); ok('image: palette finds the five colors with their shares');
+assert.equal(paletteFromPixels(img([['#336699', 10], ['#ffffff', 0]]).concat([0, 0, 0, 0])).length, 1); ok('image: transparent pixels are ignored');
+const fromImg = familyFromPalette(pal, 'Hangar');
+assert.equal(fromImg.id, 'hangar'); assert.equal(fromImg.generator?.dominant, nearestHue('#1e50a2')); assert.equal(fromImg.generator?.signature?.primary, '#1e50a2');
+assert.deepEqual([...fromImg.generator!.signature!.pops!].sort(), ['#d0202e', '#f6c200']); assert.equal(fromImg.generator?.signature?.night, '#0c1a33'); assert.equal(fromImg.generator?.signature?.day, undefined); ok('image: accent, pops and night tint come from the picture');
+assert.equal(C.generateFamilyThemes(fromImg).flatMap((t: any) => auditTheme(t).filter((r: any) => !r.pass)).length, 0); ok('image: the generated family passes the audit');
+assert.throws(() => familyFromPalette(paletteFromPixels(img([['#808080', 50], ['#202020', 50], ['#f0f0f0', 50]])), 'Gray'), /too little color/); ok('image: a gray image is refused with a readable message');
+const warm = familyFromPalette(paletteFromPixels(img([['#e8d9b5', 500], ['#c0392b', 200], ['#f1c40f', 120], ['#2e86c1', 100], ['#27ae60', 80]])), 'Warm');
+const dbz = familyFromPalette(paletteFromPixels(img([['#f37021', 300], ['#1c3f95', 250], ['#ffd23f', 150], ['#4fc3f7', 100], ['#101a33', 200]])), 'Arena');
+assert.deepEqual([...dbz.generator!.signature!.pops!].sort(), ['#1c3f95', '#4fc3f7', '#ffd23f']); ok('image: close hues that differ in lightness (gold by orange, cyan by blue) stay separate pops');
+assert.equal(familyFromPalette(paletteFromPixels(img([['#f37021', 990], ['#1c3f95', 10]])), 'Edge').generator!.pops.length, 0); ok('image: a sliver under 2% is not a pop');
+assert.equal(warm.generator?.neutral, 'stone'); assert.ok(!['yellow', 'amber', 'orange'].includes(warm.generator!.pops[1])); ok('image: warm grays pick stone, and the info slot avoids warm hues');
 console.log(`\n${n} passed`);

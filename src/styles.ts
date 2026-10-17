@@ -227,6 +227,11 @@ export const CSS = `
 .nte-warnbox ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
 .nte-dropzone { display: flex; align-items: center; gap: 10px; border: 1px dashed var(--nim-border); border-radius: 8px; padding: 10px 12px; color: var(--nim-text-muted); }
 .nte-dropzone.over { border-color: var(--nim-primary); background: var(--nim-bg-selected); }
+.nte-imgthumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--nim-border); flex: none; }
+.nte-imgpalette { display: flex; height: 18px; margin-top: 8px; border-radius: 6px; overflow: hidden; border: 1px solid var(--nim-border); }
+.nte-imgpalette i { flex-basis: 0; min-width: 8px; }
+.nte-imgname { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
+.nte-imgname .nte-input { flex: 1; max-width: 320px; }
 .nte-importstatus { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
 .nte-importstatus.err { color: var(--nim-error); }
 .nte-importstatus.ok > .nte-icon { color: var(--nim-success); }

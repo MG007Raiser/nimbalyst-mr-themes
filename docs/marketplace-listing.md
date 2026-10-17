@@ -21,11 +21,11 @@ Draft for the Nimbalyst extension marketplace, 2026-10-02. Nimbalyst does not do
 
 **Long description**
 
-> Create, preview, share and apply Nimbalyst color themes, globally or per project. Mr. Themes ships with twenty theme families of six themes each (light and dark, in subtle, pigment and juicy variations): 120 presets whose contrast is checked by a generator, not by hand. Parchment and Solar put their light themes on sepia and cream paper; Beacon raises every contrast target for low vision and bright rooms. With Mr. Projects installed, the Theme Gallery shows which theme every open project uses and lets you change it in one click; the Theme Collection holds every theme you own, and Theme Families groups them. Edit any `.nimtheme` file with all 75 Nimbalyst colors, live previews and a 17-check contrast audit that can fix failing colors for you. Want a family of your own? Download the Family Builder Kit for Agents into a project and ask your agent to design, audit and preview one, then import it.
+> Create, preview, share and apply Nimbalyst color themes, globally or per project. Mr. Themes ships with twenty-two theme families of six themes each (light and dark, in subtle, pigment and juicy variations): 132 presets whose contrast is checked by a generator, not by hand. Parchment and Solar put their light themes on sepia and cream paper; Beacon raises every contrast target for low vision and bright rooms. With Mr. Projects installed, the Theme Gallery shows which theme every open project uses and lets you change it in one click; the Theme Collection holds every theme you own, and Theme Families groups them. Edit any `.nimtheme` file with all 75 Nimbalyst colors, live previews and a 17-check contrast audit that can fix failing colors for you. Want a family of your own? Download the Family Builder Kit for Agents into a project and ask your agent to design, audit and preview one, then import it.
 
 **Highlights** (kept from the `marketplace` block that was already in `manifest.json`)
 
-- Twenty theme families × light and dark × subtle, pigment, juicy: 120 presets
+- Twenty-two theme families × light and dark × subtle, pigment, juicy: 132 presets
 - Edit all 75 theme colors, not just the 20 the manifest exposes
 - Contrast audit and one-click repair, three UI previews, and Try live
 - Share as a .nimtheme file, JSON, or an installable theme extension

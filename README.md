@@ -14,7 +14,8 @@ Visually orient between projects, each with a chosen look. Built for multitaskin
   <img alt="The Mr. Themes gallery: the theme each project uses, above the theme collection" src="screenshots/com.fireworklabs.theme-editor-0-dark.png">
 </picture>
 
-- 120 themes in twenty families, light and dark, all checked for readable contrast, including cream-paper and high-contrast families
+- 132 themes in twenty-two families, light and dark, all checked for readable contrast
+- Flip through themes live with the arrows, star your favorites, or turn any image into a family
 - See and change which theme each project uses
 - Edit all 75 of the app's colors with a live preview (Nimbalyst's own themes can set 20)
 - Share themes as files, or have your agent design a family with the included Family Builder Kit
@@ -33,7 +34,10 @@ This is the MG007Raiser fork. It keeps the original extension id, so your collec
 
 ## What's new in this fork
 
-- Fourteen more built-in families on top of the original six. Cyberpunk, Cobalt, Garnet, Matcha, Frost (arctic cyan), Nocturne (after-midnight purple), Bramble (retro green), Lavender (soft pastels), Arcade (neon pink), Dusk (sunset orange) and Pine (cool forest) are new in every variation. Parchment and Solar put their light themes on sepia and cream paper. Beacon is high contrast: text at 10:1 or more, accents and code at 7:1, borders at 3:1.
+- Sixteen more built-in families on top of the original six. Cyberpunk, Cobalt, Garnet, Matcha, Frost (arctic cyan), Nocturne (after-midnight purple), Bramble (retro green), Lavender (soft pastels), Arcade (neon pink), Dusk (sunset orange) and Pine (cool forest) are new in every variation. Parchment and Solar put their light themes on sepia and cream paper. Beacon is high contrast: text at 10:1 or more, accents and code at 7:1, borders at 3:1. Mecha (inspired by the RX-78 mobile suit) and Power Level (inspired by Dragon Ball Z) pin exact signature colors on top of the generator.
+- Cycle through themes live: open a theme and use the arrows (or the arrow keys) to step through its family, the whole collection, or your favorites while the app follows along. Esc turns the live preview off.
+- Favorites: star themes on their cards or in the editor; they get their own row at the top of the gallery.
+- Family from image: pick, drop or paste a picture in Theme Families and get a light and dark family built from its colors, checked for contrast like the rest.
 - Families added in an update arrive in your collection once, without bringing back families you deleted.
 - The Family Builder Kit CLI runs on Windows and takes `--paper <hue>` and `--contrast high`.
 
