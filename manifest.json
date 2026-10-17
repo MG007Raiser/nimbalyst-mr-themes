@@ -1,7 +1,7 @@
 {
   "id": "com.fireworklabs.theme-editor",
   "name": "Mr. Themes",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Every project gets its own theme. Best buds with Mr. Projects. Create, preview, save, share, and apply Nimbalyst color themes, globally or per project. Ships with twenty theme families: 120 contrast-checked presets built on the Tailwind palette, including cream-paper and high-contrast families.",
   "author": "Firework Labs",
   "main": "dist/index.js",
