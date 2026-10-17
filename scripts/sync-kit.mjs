@@ -11,7 +11,7 @@
  * Run after changing the toolkit: `npm run sync-kit` (also part of `npm run build`).
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -32,7 +32,8 @@ const copy = (rel) => {
   if (SKIP.has(rel) || rel.split('/').some((p) => p.startsWith('.'))) return;
   const from = join(SRC, rel);
   if (statSync(from).isDirectory()) {
-    for (const e of readdirSync(from)) copy(relative(SRC, join(from, e)));
+    // Kit paths use forward slashes: SKIP and the dot check match them on Windows too.
+    for (const e of readdirSync(from)) copy(relative(SRC, join(from, e)).split(sep).join('/'));
     return;
   }
   mkdirSync(dirname(join(OUT, rel)), { recursive: true });
