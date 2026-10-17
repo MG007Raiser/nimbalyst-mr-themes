@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { copyToClipboard, type PanelHostProps } from '@nimbalyst/extension-sdk';
 import { applier } from '../applier';
 import {
-  FAMILY_SWATCH_COUNT, cycleList, generateFamilyThemes, deleteFamilyFrom, familyHeaderColors, importInto, missingBuiltins, parseFamilyImport, parseThemeImport, restoreBuiltinsInto,
+  FAMILY_SWATCH_COUNT, cycleList, generateFamilyThemes, deleteFamilyFrom, removeThemesFrom, familyHeaderColors, importInto, missingBuiltins, parseFamilyImport, parseThemeImport, restoreBuiltinsInto,
   saveFamilyInto, serializeFamilyFile, setThemeFamily, stepTheme, suggestedSwatches, uniqueSlug,
   type CycleScope, type FamilyForm, type ImportPayload, type ThemeFamily,
 } from '../collection';
@@ -49,7 +49,8 @@ type Modal =
   | { kind: 'deleteFamily'; family: ThemeFamily }
   | { kind: 'family'; family: ThemeFamily | null }
   | { kind: 'fromImage' }
-  | { kind: 'remix'; family: ThemeFamily };
+  | { kind: 'remix'; family: ThemeFamily }
+  | { kind: 'deleteMany'; ids: string[] };
 
 const GLOBAL_LABEL = 'Nimbalyst Global Theme';
 
@@ -116,11 +117,26 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   const [favorites, setFavs] = useState<string[]>(() => getFavorites());
   const favRef = useRef(favorites);
   const [cycleScope, setCycleScope] = useState<CycleScope>('family');
+  /** Selection mode in the Theme Collection: card clicks toggle selection instead of opening the editor. */
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  /** A family to scroll to and flash once it has rendered (after an image import, or a chip click). */
+  const [jumpTo, setJumpTo] = useState<string | null>(null);
   /** The edit view's keyboard handler, refreshed every render so it sees current state. */
   const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
 
   useEffect(() => applier.subscribe(setApplierState), []);
   useEffect(() => () => applier.setPreview(null), []);
+  useEffect(() => {
+    if (!jumpTo) return;
+    const el = document.querySelector<HTMLElement>(`[data-family="${CSS.escape(jumpTo)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    el.classList.add('flash');
+    const t = setTimeout(() => el.classList.remove('flash'), 1600);
+    setJumpTo(null);
+    return () => clearTimeout(t);
+  }, [jumpTo, data]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => keyRef.current(e);
     window.addEventListener('keydown', onKey);
@@ -237,16 +253,57 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   };
 
   /** Remove themes and lift any global or project assignment that used them. */
-  const removeThemes = async (ids: Set<string>, nextFamilies: ThemeFamily[] = families) => {
-    await save(themes.filter((x) => !ids.has(x.id)), nextFamilies);
+  /** Remove themes, drop families they leave empty, and lift every assignment and favorite that used them. */
+  const removeThemes = async (ids: Set<string>, nextFamilies: ThemeFamily[] = families): Promise<ThemeFamily[]> => {
+    const { state, emptied } = removeThemesFrom({ themes, families: nextFamilies }, ids);
+    await save(state.themes, state.families);
     if (enabledId && ids.has(enabledId)) await applier.enable(null);
     for (const p of resolvedProjects) if (p.themeId && ids.has(p.themeId)) await bridge?.setProjectTheme(p.path, null);
+    if (favRef.current.some((id) => ids.has(id))) {
+      const next = favRef.current.filter((id) => !ids.has(id));
+      favRef.current = next;
+      setFavs(next);
+      void setFavorites(next);
+    }
+    setSelected((sel) => new Set([...sel].filter((id) => !ids.has(id))));
+    return emptied;
+  };
+
+  const deleteMany = async (ids: string[]) => {
+    const emptied = await removeThemes(new Set(ids));
+    setModal(null);
+    setSelecting(false);
+    setSelected(new Set());
+    const fams = emptied.length ? ` and the ${emptied.map((f) => f.name).join(', ')} famil${emptied.length === 1 ? 'y' : 'ies'} they emptied` : '';
+    toast('info', `Deleted ${ids.length} theme${ids.length === 1 ? '' : 's'}${fams}.`);
+  };
+
+  /** Select the ids, or unselect them when all are already selected. */
+  const toggleSelected = (ids: string[]) => setSelected((sel) => {
+    const n = new Set(sel);
+    const allIn = ids.every((id) => n.has(id));
+    for (const id of ids) {
+      if (allIn) n.delete(id);
+      else n.add(id);
+    }
+    return n;
+  });
+
+  const endSelecting = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+
+  const showFamily = (familyId: string) => {
+    setFamiliesOpen(true);
+    setOpenFamilies((s) => new Set(s).add(familyId));
+    setJumpTo(familyId);
   };
 
   const deleteTheme = async (t: ThemeFile) => {
-    await removeThemes(new Set([t.id]));
+    const emptied = await removeThemes(new Set([t.id]));
     setModal(null);
-    toast('info', `Deleted "${t.name}".`);
+    toast('info', `Deleted "${t.name}"${emptied.length ? `, the last theme of the ${emptied[0].name} family, which went with it` : ''}.`);
   };
 
   const deleteFamily = async (f: ThemeFamily, withThemes: boolean) => {
@@ -289,10 +346,7 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
     // A replace may have recolored the global theme; re-apply it.
     const refreshed = enabledId ? state.themes.find((t) => t.id === enabledId) : null;
     if (refreshed && mode === 'replace') await applier.enable(refreshed);
-    if (familyId) {
-      setOpenFamilies((s) => new Set(s).add(familyId));
-      setFamiliesOpen(true);
-    }
+    if (familyId) showFamily(familyId);
     setModal(null);
     const n = payload.themes.length;
     const famName = state.families.find((f) => f.id === familyId)?.name ?? '';
@@ -414,6 +468,11 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   };
 
   keyRef.current = (e: KeyboardEvent) => {
+    if (view.kind === 'grid' && selecting && !modal && e.key === 'Escape') {
+      e.preventDefault();
+      endSelecting();
+      return;
+    }
     if (view.kind !== 'edit' || modal || e.altKey || e.ctrlKey || e.metaKey) return;
     const el = e.target as HTMLElement | null;
     if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return;
@@ -566,7 +625,16 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
       { label: 'Delete…', icon: 'delete', danger: true, onSelect: () => setModal({ kind: 'deleteTheme', theme: t }) },
     );
     return (
-      <div key={t.id} className={`nte-card${isGlobal ? ' on' : ''}`} onClick={() => openEdit(t)} role="button" tabIndex={0} data-theme-id={t.id}>
+      <div
+        key={t.id}
+        className={`nte-card${isGlobal ? ' on' : ''}${selecting ? ' selecting' : ''}${selected.has(t.id) ? ' picked' : ''}`}
+        onClick={() => (selecting ? toggleSelected([t.id]) : openEdit(t))}
+        role="button"
+        tabIndex={0}
+        aria-pressed={selecting ? selected.has(t.id) : undefined}
+        data-theme-id={t.id}
+      >
+        {selecting ? <span className="nte-check" aria-hidden><Icon name={selected.has(t.id) ? 'check_box' : 'check_box_outline_blank'} size={18} /></span> : null}
         <ThemeThumb theme={t} />
         <div className="nte-cardmeta">
           <div className="top">
@@ -601,9 +669,18 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
               </span>
             ) : null}
             {fam ? (
-              <span className="nte-chip fam" title={`In the ${fam.name} theme family`}>
+              <button
+                type="button"
+                className="nte-chip fam"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selecting) toggleSelected(membersOf(fam.id).map((m) => m.id));
+                  else showFamily(fam.id);
+                }}
+                title={selecting ? `Select all ${membersOf(fam.id).length} themes of the ${fam.name} family` : `In the ${fam.name} family. Click to go to it.`}
+              >
                 <i style={{ background: familyHeaderColors(fam, membersOf(fam.id), darkApp)[0] }} />{fam.name}
-              </span>
+              </button>
             ) : null}
           </div>
         </div>
@@ -700,11 +777,22 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
                   Family themes
                 </Pill>
                 <span className="nte-grow" />
+                <Button icon={selecting ? 'close' : 'checklist'} onClick={() => (selecting ? endSelecting() : setSelecting(true))} title={selecting ? 'Leave selection mode (Esc)' : 'Select several themes to delete them at once'}>{selecting ? 'Done' : 'Select'}</Button>
                 <Button icon="photo_camera" onClick={() => void capture()} title="Snapshot the app's current colors into a new theme">Capture current to Mr. Themes</Button>
                 <Button icon="download" onClick={() => setModal({ kind: 'importTheme' })} title="Import one theme from a .nimtheme file (families import under Theme Families)">Import theme</Button>
                 <Button variant="primary" icon="add" onClick={createNew}>New theme</Button>
               </div>
             </div>
+            {selecting ? (
+              <div className="nte-selbar" data-testid="selection-bar">
+                <b>{selected.size} selected</b>
+                <span className="nte-faint">Click cards to select; a card's family chip selects the whole family.</span>
+                <span className="nte-grow" />
+                <Button size="sm" onClick={() => toggleSelected(visible.map((t) => t.id))}>{visible.length && visible.every((t) => selected.has(t.id)) ? 'Unselect shown' : `Select all shown (${visible.length})`}</Button>
+                <Button size="sm" variant="ghost" disabled={!selected.size} onClick={() => setSelected(new Set())}>Clear</Button>
+                <Button size="sm" variant="danger" icon="delete" disabled={!selected.size} onClick={() => setModal({ kind: 'deleteMany', ids: [...selected] })}>Delete selected…</Button>
+              </div>
+            ) : null}
             {visible.length ? <div className="nte-grid">{visible.map(renderCard)}</div> : <div className="nte-empty">No themes match.</div>}
           </section>
 
@@ -806,6 +894,26 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
             note="Closed projects that use this theme will fall back to the global theme when you next open them."
             onClose={() => setModal(null)}
             actions={<Button variant="danger" icon="delete" onClick={() => void deleteTheme(t)}>Delete theme</Button>}
+          />
+        );
+      })() : null}
+      {modal?.kind === 'deleteMany' ? (() => {
+        const list = modal.ids.map((id) => byId.get(id)).filter((t): t is ThemeFile => !!t);
+        const ids = new Set(list.map((t) => t.id));
+        const inUse = list.filter((t) => (assignments.get(t.id) ?? []).length);
+        const builtins = list.filter((t) => isPresetId(t.id)).length;
+        const emptied = removeThemesFrom({ themes, families }, ids).emptied;
+        const warnings: ReactNode[] = [];
+        if (inUse.length) warnings.push(<>In use: {inUse.map((t, i) => <span key={t.id}>{i ? '; ' : ''}<b>{t.name}</b> is {usagePhrase(assignments.get(t.id)!)}</span>)}. Those go back to the global or native theme.</>);
+        if (emptied.length) warnings.push(<>This empties the {emptied.map((f, i) => <span key={f.id}>{i ? ', ' : ''}<b>{f.name}</b></span>)} famil{emptied.length === 1 ? 'y' : 'ies'}, so {emptied.length === 1 ? 'it goes' : 'they go'} too.</>);
+        if (builtins) warnings.push(<>{builtins} of them {builtins === 1 ? 'is a built-in theme' : 'are built-in themes'}. “Restore built-ins” under Theme Families brings {builtins === 1 ? 'it' : 'them'} back.</>);
+        return (
+          <ConfirmModal
+            title={`Delete ${list.length} theme${list.length === 1 ? '' : 's'}?`}
+            warnings={warnings}
+            note="Closed projects that use one of these themes will fall back to the global theme when you next open them."
+            onClose={() => setModal(null)}
+            actions={<Button variant="danger" icon="delete" onClick={() => void deleteMany(list.map((t) => t.id))}>Delete {list.length} theme{list.length === 1 ? '' : 's'}</Button>}
           />
         );
       })() : null}

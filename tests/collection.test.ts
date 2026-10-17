@@ -153,6 +153,14 @@ const dbz = familyFromPalette(paletteFromPixels(img([['#f37021', 300], ['#1c3f95
 assert.deepEqual([...dbz.generator!.signature!.pops!].sort(), ['#1c3f95', '#4fc3f7', '#ffd23f']); ok('image: close hues that differ in lightness (gold by orange, cyan by blue) stay separate pops');
 assert.equal(familyFromPalette(paletteFromPixels(img([['#f37021', 990], ['#1c3f95', 10]])), 'Edge').generator!.pops.length, 0); ok('image: a sliver under 2% is not a pop');
 assert.equal(warm.generator?.neutral, 'stone'); assert.ok(!['yellow', 'amber', 'orange'].includes(warm.generator!.pops[1])); ok('image: warm grays pick stone, and the info slot avoids warm hues');
+// bulk delete: families emptied by a delete go with it
+const coll = { themes: [...PRESETS], families: C.BUILTIN_FAMILIES.map((f: any) => ({ ...f })) };
+const frostIds = members('frost').map((t: any) => t.id);
+const bulk = C.removeThemesFrom(coll, new Set([...frostIds, 'harbor-dark-juicy']));
+assert.equal(bulk.state.themes.length, 125); assert.deepEqual(bulk.emptied.map((f: any) => f.id), ['frost']); assert.ok(!bulk.state.families.some((f: any) => f.id === 'frost') && bulk.state.families.some((f: any) => f.id === 'harbor')); ok('bulk delete: a family losing its last theme goes, a partly emptied one stays');
+const withEmpty = { ...coll, families: [...coll.families, { id: 'empty', name: 'Empty' }] };
+assert.ok(C.removeThemesFrom(withEmpty, new Set(['harbor-dark-juicy'])).state.families.some((f: any) => f.id === 'empty')); ok('bulk delete: an already empty family is left alone');
+
 // remix: same colors, new roles
 const R = await import('../src/remix');
 const plFam = C.BUILTIN_FAMILIES.find((f: any) => f.id === 'power-level')!;

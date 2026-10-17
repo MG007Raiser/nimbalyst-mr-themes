@@ -227,6 +227,14 @@ export const CSS = `
 .nte-warnbox ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
 .nte-dropzone { display: flex; align-items: center; gap: 10px; border: 1px dashed var(--nim-border); border-radius: 8px; padding: 10px 12px; color: var(--nim-text-muted); }
 .nte-dropzone.over { border-color: var(--nim-primary); background: var(--nim-bg-selected); }
+.nte-card .nte-check { position: absolute; top: 6px; left: 6px; z-index: 1; line-height: 0; padding: 2px; border-radius: 5px; background: var(--nim-bg); color: var(--nim-text-muted); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.nte-card.picked { border-color: var(--nim-primary); box-shadow: 0 0 0 2px var(--nim-primary); }
+.nte-card.picked .nte-check { color: var(--nim-primary); }
+.nte-selbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 8px 12px; border: 1px solid var(--nim-primary); border-radius: 8px; background: var(--nim-bg-secondary); font-size: 12px; }
+button.nte-chip.fam { cursor: pointer; font-family: inherit; background: transparent; }
+button.nte-chip.fam:hover { border-color: var(--nim-text-faint); }
+.nte-family.flash { animation: nte-flash 1.6s ease-out; }
+@keyframes nte-flash { 0%, 40% { box-shadow: 0 0 0 2px var(--nim-primary); } 100% { box-shadow: 0 0 0 0 transparent; } }
 .nte-remixrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .nte-remixlabel { width: 70px; flex: none; font-size: 12px; color: var(--nim-text-muted); }
 .nte-remixrow .nte-importthumbs { margin-left: 0; }

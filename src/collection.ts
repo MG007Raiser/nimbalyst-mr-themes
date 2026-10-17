@@ -376,6 +376,20 @@ export function deleteFamilyFrom(s: CollectionState, familyId: string, withTheme
   return { state: { themes, families }, removedThemeIds: withThemes ? members : [] };
 }
 
+/**
+ * Delete themes by id. A family that loses its last theme this way goes too
+ * (an empty family has nothing to show or apply; Restore built-ins brings a
+ * built-in one back). Families that were already empty are left alone.
+ */
+export function removeThemesFrom(s: CollectionState, ids: Set<string>): { state: CollectionState; emptied: ThemeFamily[] } {
+  const themes = s.themes.filter((t) => !ids.has(t.id));
+  const had = new Set(s.themes.filter((t) => ids.has(t.id) && t.family).map((t) => t.family!));
+  const left = new Set(themes.map((t) => t.family).filter(Boolean));
+  const emptied = s.families.filter((f) => had.has(f.id) && !left.has(f.id));
+  const gone = new Set(emptied.map((f) => f.id));
+  return { state: { themes, families: s.families.filter((f) => !gone.has(f.id)) }, emptied };
+}
+
 export function missingBuiltins(s: CollectionState): { families: ThemeFamily[]; themes: ThemeFile[] } {
   const famIds = new Set(s.families.map((f) => f.id));
   const themeIds = new Set(s.themes.map((t) => t.id));

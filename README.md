@@ -39,6 +39,7 @@ This is the MG007Raiser fork. It keeps the original extension id, so your collec
 - Favorites: star themes on their cards or in the editor; they get their own row at the top of the gallery.
 - Family from image: pick, drop or paste a picture in Theme Families and get a light and dark family built from its colors, checked for contrast like the rest.
 - Remix: on any generated family, shuffle its colors into new roles (a different lead, reordered accents, another gray), preview the remix live, then replace the family or add the remix as a new one.
+- Select several themes in the Theme Collection (a card's family chip selects the whole family) and delete them at once. A family left empty goes with its last theme, and a family chip jumps to its family.
 - Families added in an update arrive in your collection once, without bringing back families you deleted.
 - The Family Builder Kit CLI runs on Windows and takes `--paper <hue>` and `--contrast high`.
 
