@@ -28,13 +28,13 @@ const base = { themes: [...PRESETS], families: C.BUILTIN_FAMILIES.map((f: any) =
 const picks = ['harbor-dark-juicy', 'grove-light-subtle', 'plum-dark-pigment'];
 const sw = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff'];
 const made = C.saveFamilyInto(base, { name: 'Faves', description: 'Mine.', swatches: [...sw, '#123456', 'nope'], themeIds: picks }, null);
-assert.equal(made.family.id, 'faves'); assert.equal(made.state.families[0].id, 'faves'); assert.equal(made.state.themes.length, 36);
+assert.equal(made.family.id, 'faves'); assert.equal(made.state.families[0].id, 'faves'); assert.equal(made.state.themes.length, 60);
 assert.deepEqual(made.family.swatches, sw); assert.equal(made.moved, 3);
 assert.deepEqual(made.state.themes.filter((t: any) => t.family === 'faves').map((t: any) => t.id).sort(), [...picks].sort());
 assert.equal(made.state.themes.filter((t: any) => t.family === 'harbor').length, 5); ok('new family groups existing themes, moves them, keeps 5 valid swatches, creates none');
 const edited = C.saveFamilyInto(made.state, { name: 'Faves', description: '', swatches: [], themeIds: ['grove-light-subtle'] }, 'faves');
 assert.equal(edited.state.themes.filter((t: any) => t.family === 'faves').length, 1); assert.equal(edited.state.themes.find((t: any) => t.id === 'harbor-dark-juicy').family, undefined);
-assert.equal(edited.family.swatches, undefined); assert.equal(edited.state.themes.length, 36); ok('edit: unselected members leave the family and stay in the collection');
+assert.equal(edited.family.swatches, undefined); assert.equal(edited.state.themes.length, 60); ok('edit: unselected members leave the family and stay in the collection');
 const harborEdit = C.saveFamilyInto(base, { name: 'Harbor', description: 'x', swatches: sw, themeIds: base.themes.filter((t: any) => t.family === 'harbor').map((t: any) => t.id) }, 'harbor');
 assert.deepEqual(harborEdit.family.generator, C.BUILTIN_FAMILIES[0].generator); ok('edit keeps a built-in family\'s generator as provenance');
 assert.deepEqual(C.familyHeaderColors({ ...made.family }, [], true), sw); assert.equal(C.familyHeaderColors(C.BUILTIN_FAMILIES[0], [], true).length, 5);
@@ -62,22 +62,22 @@ assert.equal(loose.state.themes[0].family, undefined); ok('loose theme drops a f
 
 // delete family
 const keep = C.deleteFamilyFrom(base, 'harbor', false);
-assert.equal(keep.state.themes.length, 36); assert.equal(keep.state.themes.filter((t: any) => t.family === 'harbor').length, 0); assert.deepEqual(keep.removedThemeIds, []); ok('delete family, keep themes');
+assert.equal(keep.state.themes.length, 60); assert.equal(keep.state.themes.filter((t: any) => t.family === 'harbor').length, 0); assert.deepEqual(keep.removedThemeIds, []); ok('delete family, keep themes');
 const drop = C.deleteFamilyFrom(base, 'harbor', true);
-assert.equal(drop.state.themes.length, 30); assert.equal(drop.removedThemeIds.length, 6); ok('delete family and themes');
+assert.equal(drop.state.themes.length, 54); assert.equal(drop.removedThemeIds.length, 6); ok('delete family and themes');
 
 // restore
 const r1 = C.restoreBuiltinsInto(keep.state);
 assert.equal(r1.families, 1); assert.equal(r1.themes, 0); assert.equal(r1.state.themes.filter((t: any) => t.family === 'harbor').length, 6); ok('restore: kept themes rejoin restored family');
 const r2 = C.restoreBuiltinsInto(drop.state);
-assert.equal(r2.themes, 6); assert.equal(r2.state.themes.length, 36); ok('restore: deleted themes come back');
+assert.equal(r2.themes, 6); assert.equal(r2.state.themes.length, 60); ok('restore: deleted themes come back');
 assert.deepEqual(C.missingBuiltins(base), { families: [], themes: [] }); ok('nothing missing on a fresh collection');
 
 // store seeding
 mem.set('com.fireworklabs.theme-editor/userThemes', JSON.stringify([{ id: 'mine', name: 'Mine', isDark: true, colors: { bg: '#000000' } }]));
-assert.equal(store.getCollection().length, 37); assert.equal(store.getCollection()[0].id, 'mine'); assert.equal(store.getFamilies().length, 6); ok('pre-seed view: user themes then presets, builtin families');
+assert.equal(store.getCollection().length, 61); assert.equal(store.getCollection()[0].id, 'mine'); assert.equal(store.getFamilies().length, 10); ok('pre-seed view: user themes then presets, builtin families');
 await store.ensureSeeded();
-assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/userThemes')!).length, 37); assert.equal(mem.get('com.fireworklabs.theme-editor/collectionSeeded'), '1'); ok('seed persisted');
+assert.equal(JSON.parse(mem.get('com.fireworklabs.theme-editor/userThemes')!).length, 61); assert.equal(mem.get('com.fireworklabs.theme-editor/collectionSeeded'), '1'); ok('seed persisted');
 await store.setCollection([], []);
 assert.equal(store.getCollection().length, 0); assert.equal(store.getFamilies().length, 0); ok('after seeding, an empty collection stays empty (no re-seed)');
 console.log(`\n${n} passed`);

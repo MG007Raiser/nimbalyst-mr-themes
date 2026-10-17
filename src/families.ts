@@ -1,7 +1,7 @@
 /**
  * Theme families.
  *
- * Six families, each built on one dominant Tailwind hue with up to four pop
+ * Ten families, each built on one dominant Tailwind hue with up to four pop
  * hues and a neutral ladder. Every family has two factions (light, dark) and
  * each faction three variations with a distinct character:
  *
@@ -47,6 +47,10 @@ export const FAMILIES: FamilySpec[] = [
   { id: 'ember', name: 'Ember', description: 'Banked fire: orange over stone.', dominant: 'orange', pops: ['amber', 'red', 'yellow', 'cyan'], neutral: 'stone' },
   { id: 'rosewater', name: 'Rosewater', description: 'Petals and paper: rose over neutral gray.', dominant: 'rose', pops: ['pink', 'fuchsia', 'orange', 'teal'], neutral: 'neutral' },
   { id: 'lagoon', name: 'Lagoon', description: 'Still water: teal over cool gray.', dominant: 'teal', pops: ['cyan', 'emerald', 'lime', 'violet'], neutral: 'gray' },
+  { id: 'cyberpunk', name: 'Cyberpunk', description: 'Neon on wet asphalt: fuchsia and cyan over zinc.', dominant: 'fuchsia', pops: ['cyan', 'violet', 'yellow', 'lime'], neutral: 'zinc' },
+  { id: 'cobalt', name: 'Cobalt', description: 'Deep water and brass: blue over cool gray.', dominant: 'blue', pops: ['sky', 'indigo', 'amber', 'emerald'], neutral: 'gray' },
+  { id: 'garnet', name: 'Garnet', description: 'Wine and walnut: red over neutral gray.', dominant: 'red', pops: ['rose', 'orange', 'amber', 'sky'], neutral: 'neutral' },
+  { id: 'matcha', name: 'Matcha', description: 'Whisked tea: lime over warm stone.', dominant: 'lime', pops: ['emerald', 'teal', 'yellow', 'amber'], neutral: 'stone' },
 ];
 
 export const VARIATION_BLURB: Record<Variation, string> = {

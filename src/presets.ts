@@ -1,6 +1,6 @@
 /**
- * The preset library: six theme families, each with a light and a dark
- * faction and three variations (subtle, pigment, juicy). 36 themes, all
+ * The preset library: ten theme families, each with a light and a dark
+ * faction and three variations (subtle, pigment, juicy). 60 themes, all
  * generated from the Tailwind palette with enforced contrast. See families.ts.
  */
 import { buildAllThemes } from './families';

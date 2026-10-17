@@ -14,7 +14,7 @@ Visually orient between projects, each with a chosen look. Built for multitaskin
   <img alt="The Mr. Themes gallery: the theme each project uses, above the theme collection" src="screenshots/com.fireworklabs.theme-editor-0-dark.png">
 </picture>
 
-- 36 themes in six families, light and dark, all checked for readable contrast
+- 60 themes in ten families, light and dark, all checked for readable contrast
 - See and change which theme each project uses
 - Edit all 75 of the app's colors with a live preview (Nimbalyst's own themes can set 20)
 - Share themes as files, or have your agent design a family with the included Family Builder Kit
