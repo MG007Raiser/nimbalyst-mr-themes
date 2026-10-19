@@ -1,7 +1,7 @@
 {
   "id": "com.fireworklabs.theme-editor",
   "name": "Mr. Themes",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Every project gets its own theme. Best buds with Mr. Projects. Create, preview, save, share, and apply Nimbalyst color themes, globally or per project. Ships with twenty-two theme families: 132 contrast-checked presets, including cream-paper, high-contrast and anime-inspired families. Flip through themes live, star favorites, or build a family from any image.",
   "author": "Firework Labs",
   "main": "dist/index.js",
@@ -89,7 +89,8 @@
     }
   },
   "marketplace": {
-    "changelog": "0.7.0: Cycle through themes live from the editor (family, all, or favorites; arrow keys; Esc reverts); favorites; Family from image; Remix (same colors in new roles, previewed live, replace or add as new); light signature themes carry their colors in the surfaces; select and delete several themes at once; family chips jump to their family; deleting a family's last theme removes the family and its favorites; signature families with exact colors, starting with Mecha and Power Level (132 presets); description no longer cut off in the editor header.\n0.6.0: Ten new built-in families (Parchment, Solar, Frost, Nocturne, Bramble, Lavender, Arcade, Dusk, Pine, Beacon), 120 presets; paper and high-contrast generator options, also in the Family Builder Kit CLI; existing collections receive new built-in families once, without bringing back deleted ones.\n0.5.0: Card menus, grouping-only New family wizard with five header colors, separate Import theme and Import family, Download Family Builder Kit for Agents, Cancel in the theme editor; tray pickers fixed for long collections.\n0.4.0: Theme Collection and user theme families; every built-in theme can be edited and deleted; Restore built-ins; family export; terminal colors contrast-checked in every variation.\n0.3.0: Renamed from Nimbalyst Theme Editor; new gutter icon and help tooltip.",
+    "changelog": "0.7.1: Families you made (from an image, by import, or in the wizard) no longer disappear after a restart; themes that lost their family get it back on the next start, and an open gallery refreshes when that happens.
+0.7.0: Cycle through themes live from the editor (family, all, or favorites; arrow keys; Esc reverts); favorites; Family from image; Remix (same colors in new roles, previewed live, replace or add as new); light signature themes carry their colors in the surfaces; select and delete several themes at once; family chips jump to their family; deleting a family's last theme removes the family and its favorites; signature families with exact colors, starting with Mecha and Power Level (132 presets); description no longer cut off in the editor header.\n0.6.0: Ten new built-in families (Parchment, Solar, Frost, Nocturne, Bramble, Lavender, Arcade, Dusk, Pine, Beacon), 120 presets; paper and high-contrast generator options, also in the Family Builder Kit CLI; existing collections receive new built-in families once, without bringing back deleted ones.\n0.5.0: Card menus, grouping-only New family wizard with five header colors, separate Import theme and Import family, Download Family Builder Kit for Agents, Cancel in the theme editor; tray pickers fixed for long collections.\n0.4.0: Theme Collection and user theme families; every built-in theme can be edited and deleted; Restore built-ins; family export; terminal colors contrast-checked in every variation.\n0.3.0: Renamed from Nimbalyst Theme Editor; new gutter icon and help tooltip.",
     "categories": [
       "developer-tools"
     ],
