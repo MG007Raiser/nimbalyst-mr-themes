@@ -26,7 +26,7 @@ import { canRemix, remixFamily, roleColors } from '../remix';
 import { KIT_DIR, KIT_FILES } from '../kit';
 import { LEGACY_PRESET_IDS, isPresetId } from '../presets';
 import { getProjectBridge, type ProjectInfo, type ProjectThemeBridge } from '../projectBridge';
-import { getCollection, getExtensionContext, getFamilies, getFavorites, setCollection, setFavorites, toast } from '../store';
+import { getCollection, getExtensionContext, getFamilies, getFavorites, onCollectionChanged, setCollection, setFavorites, toast } from '../store';
 import { ensureStyles } from '../styles';
 import { themeIconSvg } from '../themeIcon';
 import {
@@ -126,6 +126,8 @@ export function ThemeLibraryPanel({ host }: PanelHostProps) {
   const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
 
   useEffect(() => applier.subscribe(setApplierState), []);
+  // The startup repair (store.ensureSeeded) and the editor's Add to collection write behind our back.
+  useEffect(() => onCollectionChanged(() => setData({ themes: getCollection(), families: getFamilies() })), []);
   useEffect(() => () => applier.setPreview(null), []);
   useEffect(() => {
     if (!jumpTo) return;

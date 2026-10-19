@@ -153,6 +153,64 @@ const dbz = familyFromPalette(paletteFromPixels(img([['#f37021', 300], ['#1c3f95
 assert.deepEqual([...dbz.generator!.signature!.pops!].sort(), ['#1c3f95', '#4fc3f7', '#ffd23f']); ok('image: close hues that differ in lightness (gold by orange, cyan by blue) stay separate pops');
 assert.equal(familyFromPalette(paletteFromPixels(img([['#f37021', 990], ['#1c3f95', 10]])), 'Edge').generator!.pops.length, 0); ok('image: a sliver under 2% is not a pop');
 assert.equal(warm.generator?.neutral, 'stone'); assert.ok(!['yellow', 'amber', 'orange'].includes(warm.generator!.pops[1])); ok('image: warm grays pick stone, and the info slot avoids warm hues');
+// families lost on startup (fixed in 0.7.1): themes that name a missing family get it back
+const hangar = { ...fromImg, id: 'hangar-bay', name: 'Hangar Bay', description: 'Made from hangar.v2.png.' };
+const hangarThemes = C.generateFamilyThemes(hangar);
+const orphaned = { themes: [...hangarThemes, ...members('mecha')], families: C.BUILTIN_FAMILIES.filter((f: any) => f.id !== 'mecha').map((f: any) => ({ ...f })) };
+const reh = C.rehomeOrphansInto(orphaned);
+assert.deepEqual(reh.rebuilt.map((f: any) => f.id), ['hangar-bay', 'mecha']);
+const backH = reh.state.families.find((f: any) => f.id === 'hangar-bay')!;
+assert.equal(backH.name, 'Hangar Bay'); assert.equal(backH.description, 'Made from hangar.v2.png.'); assert.equal(backH.generator, undefined);
+assert.deepEqual(reh.state.families.find((f: any) => f.id === 'mecha')!.generator, C.BUILTIN_FAMILIES.find((f: any) => f.id === 'mecha')!.generator); ok('rehome: a lost image family is rebuilt from its themes, a lost built-in comes back whole');
+assert.equal(C.rehomeOrphansInto(reh.state).rebuilt.length, 0); ok('rehome: nothing to do once every family is back');
+assert.equal(C.rehomeOrphansInto({ themes: [{ ...PRESETS[0], id: 'x', name: 'Odd', family: 'my-odd-one' }], families: [] }).rebuilt[0].name, 'My Odd One'); ok('rehome: a theme without generator names falls back to the family id');
+
+// The race itself: Nimbalyst answers get() with manifest defaults until the configuration has loaded.
+const NS = 'com.fireworklabs.theme-editor/';
+const DEFAULTS: Record<string, unknown> = { userThemes: [], themeFamilies: [], collectionSeeded: 0, builtinFamiliesSeen: [], favoriteThemes: [] };
+const fakeHost = (persisted: Map<string, unknown>) => {
+  const cache = new Map<string, unknown>();
+  const get = (k: string, d: unknown) => (cache.has(k) ? cache.get(k) : k in DEFAULTS ? DEFAULTS[k] : d);
+  const update = async (k: string, v: unknown) => void (persisted.set(k, v), cache.set(k, v));
+  store.setExtensionContext({ services: { configuration: { get, update } } } as any);
+  return () => persisted.forEach((v, k) => cache.set(k, v));
+};
+const fullState = { themes: [...hangarThemes, ...PRESETS], families: [{ ...hangar }, ...C.BUILTIN_FAMILIES.map((f: any) => ({ ...f }))] };
+const persistedOf = (s: { themes: any[]; families: any[] }, seen: string[]) => new Map<string, unknown>([['userThemes', s.themes], ['themeFamilies', s.families], ['collectionSeeded', 1], ['builtinFamiliesSeen', seen]]);
+const mirror = (s: { themes: any[]; families: any[] }, seen: string[]) => {
+  mem.clear();
+  mem.set(NS + 'userThemes', JSON.stringify(s.themes)); mem.set(NS + 'themeFamilies', JSON.stringify(s.families));
+  mem.set(NS + 'collectionSeeded', '1'); mem.set(NS + 'builtinFamiliesSeen', JSON.stringify(seen));
+};
+const allSeen = C.BUILTIN_FAMILIES.map((f: any) => f.id);
+
+mirror(fullState, allSeen);
+let p1 = persistedOf(fullState, allSeen);
+fakeHost(p1);
+assert.equal(store.getFamilies().length, 23); assert.equal(store.getCollection().length, 138);
+await store.ensureSeeded();
+assert.ok(store.getFamilies().some((f: any) => f.id === 'hangar-bay')); assert.ok((p1.get('themeFamilies') as any[]).some((f: any) => f.id === 'hangar-bay')); ok('race: configuration not loaded yet, the mirror keeps the image family');
+
+mem.clear();
+const p2 = persistedOf(fullState, allSeen);
+const load2 = fakeHost(p2);
+setTimeout(load2, 300);
+const t0 = Date.now();
+await store.ensureSeeded();
+assert.ok(Date.now() - t0 >= 250); assert.equal((p2.get('themeFamilies') as any[]).length, 23); assert.equal(store.getFamilies().length, 23); ok('race: no mirror either, seeding waits for the configuration instead of resetting families');
+
+const damaged = { themes: fullState.themes, families: C.BUILTIN_FAMILIES.filter((f: any) => !['mecha', 'power-level'].includes(f.id)).map((f: any) => ({ ...f })) };
+const seen20 = allSeen.filter((id: string) => !['mecha', 'power-level'].includes(id));
+mirror(damaged, seen20);
+const p3 = persistedOf(damaged, seen20);
+fakeHost(p3)();
+await store.ensureSeeded();
+const fams3 = (p3.get('themeFamilies') as any[]).map((f: any) => f.id);
+assert.equal(fams3.length, 23); assert.ok(['mecha', 'power-level', 'hangar-bay'].every((id) => fams3.includes(id))); assert.equal((p3.get('userThemes') as any[]).length, 138);
+assert.equal((p3.get('builtinFamiliesSeen') as any[]).length, 22); ok('repair: a collection damaged by the race gets Mecha, Power Level and the image family back');
+store.setExtensionContext(null);
+mem.clear();
+
 // bulk delete: families emptied by a delete go with it
 const coll = { themes: [...PRESETS], families: C.BUILTIN_FAMILIES.map((f: any) => ({ ...f })) };
 const frostIds = members('frost').map((t: any) => t.id);

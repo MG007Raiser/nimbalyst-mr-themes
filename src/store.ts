@@ -1,13 +1,15 @@
 /**
  * Persistence for the enabled theme and the user's theme library.
  *
- * Source of truth is the extension configuration service (user scope), which
- * is available in activate() before any UI mounts. localStorage mirrors the
- * same data so the applier can paint at startup with zero flash even if the
- * configuration service is slow or unavailable.
+ * Source of truth is the extension configuration service (user scope).
+ * localStorage mirrors the same data so the applier can paint at startup with
+ * zero flash, and so reads stay right while the configuration is loading:
+ * Nimbalyst fetches it in the background after activate() and until then
+ * answers every get() with the manifest default (0, []). A default value
+ * therefore says nothing, and the readers below fall back to the mirror.
  */
 import type { ExtensionContext } from '@nimbalyst/extension-sdk';
-import { BUILTIN_FAMILIES, LEGACY_BUILTIN_FAMILY_IDS, addNewBuiltinsInto, normalizeFamily, type ThemeFamily } from './collection';
+import { BUILTIN_FAMILIES, LEGACY_BUILTIN_FAMILY_IDS, addNewBuiltinsInto, normalizeFamily, rehomeOrphansInto, type ThemeFamily } from './collection';
 import { PRESETS } from './presets';
 import { normalizeTheme, type ThemeFile } from './themeSpec';
 
@@ -62,6 +64,14 @@ async function cfgSet(key: string, value: unknown): Promise<void> {
   }
 }
 
+/** A stored list: the configuration's when it has entries, else the mirror's. */
+function storedList(key: string): unknown[] {
+  const fromCfg = cfgGet<unknown>(key);
+  if (Array.isArray(fromCfg) && fromCfg.length) return fromCfg;
+  const fromLs = lsGet<unknown>(key);
+  return Array.isArray(fromLs) ? fromLs : [];
+}
+
 function safeTheme(v: unknown): ThemeFile | null {
   try {
     return v ? normalizeTheme(v) : null;
@@ -80,9 +90,7 @@ export async function setEnabledTheme(theme: ThemeFile | null): Promise<void> {
 }
 
 function storedThemes(): ThemeFile[] {
-  const fromCfg = cfgGet<unknown[]>(KEY_USER_THEMES);
-  const list = Array.isArray(fromCfg) && (fromCfg.length || isSeeded()) ? fromCfg : lsGet<unknown[]>(KEY_USER_THEMES) ?? [];
-  return list.map(safeTheme).filter((t): t is ThemeFile => t !== null);
+  return storedList(KEY_USER_THEMES).map(safeTheme).filter((t): t is ThemeFile => t !== null);
 }
 
 /**
@@ -92,7 +100,7 @@ function storedThemes(): ThemeFile[] {
  * set, so presets can be edited and deleted like any other theme.
  */
 function isSeeded(): boolean {
-  return (cfgGet<number>(KEY_SEEDED) ?? lsGet<number>(KEY_SEEDED) ?? 0) >= 1;
+  return Math.max(cfgGet<number>(KEY_SEEDED) ?? 0, lsGet<number>(KEY_SEEDED) ?? 0) >= 1;
 }
 
 /** Every theme, in collection order. Correct before and after seeding. */
@@ -104,11 +112,12 @@ export function getCollection(): ThemeFile[] {
 }
 
 export function getFamilies(): ThemeFamily[] {
-  if (!isSeeded()) return BUILTIN_FAMILIES.map((f) => ({ ...f }));
-  const fromCfg = cfgGet<unknown[]>(KEY_FAMILIES);
-  const list = Array.isArray(fromCfg) ? fromCfg : lsGet<unknown[]>(KEY_FAMILIES) ?? [];
+  return isSeeded() ? storedFamilies() : BUILTIN_FAMILIES.map((f) => ({ ...f }));
+}
+
+function storedFamilies(): ThemeFamily[] {
   const out: ThemeFamily[] = [];
-  for (const f of list) {
+  for (const f of storedList(KEY_FAMILIES)) {
     try {
       out.push(normalizeFamily(f));
     } catch {
@@ -126,29 +135,59 @@ export async function setCollection(themes: ThemeFile[], families?: ThemeFamily[
   await cfgSet(KEY_USER_THEMES, themes);
   await cfgSet(KEY_FAMILIES, fams);
   await cfgSet(KEY_SEEDED, 1);
+  for (const fn of collectionListeners) fn();
+}
+
+const collectionListeners = new Set<() => void>();
+
+/** Called after every setCollection, including the startup repair, so an open gallery can reload. */
+export function onCollectionChanged(fn: () => void): () => void {
+  collectionListeners.add(fn);
+  return () => void collectionListeners.delete(fn);
+}
+
+/**
+ * Wait until the configuration has arrived, or `ms` have passed (a true
+ * first run has no seeded flag to wait for).
+ */
+async function configurationArrived(ms = 3000): Promise<void> {
+  if (!ctx?.services.configuration) return;
+  for (const end = Date.now() + ms; Date.now() < end; ) {
+    if ((cfgGet<number>(KEY_SEEDED) ?? 0) >= 1) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
 }
 
 /**
  * Write the seeded collection once, so later reads come from storage. On
  * later runs, add built-in families that shipped after the collection was
- * seeded (each one once; see addNewBuiltinsInto).
+ * seeded (each one once; see addNewBuiltinsInto), and give back families
+ * that themes still name (see rehomeOrphansInto).
+ *
+ * Before 0.7.1 this read the seeded flag straight from the configuration,
+ * which can still be loading at activate() and then reads 0. Seeding again
+ * reset the family list to the built-ins, so families the user made (from an
+ * image, by import, in the wizard) vanished and left their themes behind.
  */
 export async function ensureSeeded(): Promise<void> {
   const allIds = BUILTIN_FAMILIES.map((f) => f.id);
+  if (!isSeeded()) await configurationArrived();
   if (!isSeeded()) {
-    await setCollection(getCollection(), getFamilies());
+    const kept = storedFamilies();
+    const ids = new Set(kept.map((f) => f.id));
+    await setCollection(getCollection(), [...kept, ...BUILTIN_FAMILIES.filter((f) => !ids.has(f.id)).map((f) => ({ ...f }))]);
     await setBuiltinsSeen(allIds);
     return;
   }
-  const stored = cfgGet<string[]>(KEY_BUILTINS_SEEN) ?? lsGet<string[]>(KEY_BUILTINS_SEEN);
-  const seen = Array.isArray(stored) ? stored : LEGACY_BUILTIN_FAMILY_IDS;
-  if (allIds.every((id) => seen.includes(id))) return;
-  const r = addNewBuiltinsInto({ themes: getCollection(), families: getFamilies() }, seen);
-  if (r.added.length) {
-    await setCollection(r.state.themes, r.state.families);
-    toast('info', `Mr. Themes added ${r.added.length} new theme ${r.added.length === 1 ? 'family' : 'families'}: ${r.added.map((f) => f.name).join(', ')}.`);
-  }
-  await setBuiltinsSeen(r.seen);
+  const stored = storedList(KEY_BUILTINS_SEEN).filter((x): x is string => typeof x === 'string');
+  const seen = stored.length ? stored : LEGACY_BUILTIN_FAMILY_IDS;
+  const fresh = allIds.every((id) => seen.includes(id)) ? null : addNewBuiltinsInto({ themes: getCollection(), families: getFamilies() }, seen);
+  const added = fresh?.added ?? [];
+  const r = rehomeOrphansInto(fresh?.state ?? { themes: getCollection(), families: getFamilies() });
+  if (added.length || r.rebuilt.length) await setCollection(r.state.themes, r.state.families);
+  if (added.length) toast('info', `Mr. Themes added ${added.length} new theme ${added.length === 1 ? 'family' : 'families'}: ${added.map((f) => f.name).join(', ')}.`);
+  if (r.rebuilt.length) toast('info', `Mr. Themes restored ${r.rebuilt.length} theme ${r.rebuilt.length === 1 ? 'family' : 'families'} that had lost track of their themes: ${r.rebuilt.map((f) => f.name).join(', ')}.`);
+  if (fresh) await setBuiltinsSeen(fresh.seen);
 }
 
 async function setBuiltinsSeen(ids: string[]): Promise<void> {
@@ -158,8 +197,7 @@ async function setBuiltinsSeen(ids: string[]): Promise<void> {
 
 /** Theme ids the user starred, in the order they were starred. */
 export function getFavorites(): string[] {
-  const v = cfgGet<unknown>(KEY_FAVORITES) ?? lsGet<unknown>(KEY_FAVORITES);
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  return storedList(KEY_FAVORITES).filter((x): x is string => typeof x === 'string');
 }
 
 export async function setFavorites(ids: string[]): Promise<void> {

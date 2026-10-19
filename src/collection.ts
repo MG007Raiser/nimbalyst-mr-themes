@@ -20,7 +20,7 @@
  *   Every theme in the file is filed under that family on import.
  * The importer also accepts a bare array of themes, or `{ "themes": [...] }`.
  */
-import { FAMILIES, FACTIONS, VARIATIONS, buildTheme, familySwatches, type FamilySpec, type Signature } from './families';
+import { FAMILIES, FACTIONS, VARIATIONS, VARIATION_BLURB, buildTheme, familySwatches, type FamilySpec, type Signature } from './families';
 import { PRESETS } from './presets';
 import { HUES, type Hue } from './tailwind';
 import { isValidColor } from './color';
@@ -414,6 +414,33 @@ export function restoreBuiltinsInto(s: CollectionState): { state: CollectionStat
     families: missing.families.length,
     themes: missing.themes.length,
   };
+}
+
+/**
+ * Give back a family to themes that name one the collection no longer has.
+ * Before 0.7.1 a startup race could reset the family list (see
+ * store.ensureSeeded) and leave such themes behind. A built-in id gets the
+ * built-in family; any other is rebuilt from its themes: the name and sub
+ * text the generator wrote into them, no generator (so no Remix).
+ */
+export function rehomeOrphansInto(s: CollectionState): { state: CollectionState; rebuilt: ThemeFamily[] } {
+  const famIds = new Set(s.families.map((f) => f.id));
+  const lost = new Map<string, ThemeFile[]>();
+  for (const t of s.themes) if (t.family && !famIds.has(t.family)) lost.set(t.family, [...(lost.get(t.family) ?? []), t]);
+  const rebuilt = [...lost].map(([id, members]) => BUILTIN_FAMILIES.find((f) => f.id === id) ?? familyFromMembers(id, members));
+  return { state: { themes: s.themes, families: [...s.families, ...rebuilt.map((f) => ({ ...f }))] }, rebuilt };
+}
+
+function familyFromMembers(id: string, members: ThemeFile[]): ThemeFamily {
+  const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
+  const named = members.find((t) => t.faction && t.variation && t.name.endsWith(` ${cap(t.faction)} ${cap(t.variation)}`));
+  const name = named ? named.name.slice(0, -` ${cap(named.faction!)} ${cap(named.variation!)}`.length) : id.split('-').filter(Boolean).map(cap).join(' ');
+  const family: ThemeFamily = { id, name: name.trim() || id };
+  const d = named?.description ?? '';
+  const blurb = named?.variation ? ` ${VARIATION_BLURB[named.variation]}` : '';
+  const description = blurb && d.endsWith(blurb) ? d.slice(0, -blurb.length) : '';
+  if (description.trim()) family.description = description.trim();
+  return family;
 }
 
 export type CycleScope = 'family' | 'all' | 'favorites';
