@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/sync-kit.mjs && vite build",
+    "build": "node scripts/check-manifest.mjs && node scripts/sync-kit.mjs && vite build",
     "test": "esbuild --bundle --platform=node --format=esm --external:@nimbalyst/extension-sdk --log-level=warning tests/collection.test.ts --outfile=/tmp/mrthemes-collection.test.mjs && node /tmp/mrthemes-collection.test.mjs",
     "sync-kit": "node scripts/sync-kit.mjs",
     "audit": "esbuild --bundle --platform=node --format=esm --log-level=warning scripts/audit-presets.ts --outfile=/tmp/mrthemes-audit.mjs && node /tmp/mrthemes-audit.mjs",

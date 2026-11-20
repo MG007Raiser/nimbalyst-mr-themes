@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as C from '../src/collection';
 import { PRESETS } from '../src/presets';
 import { auditTheme } from '../src/contrast';
@@ -233,4 +234,8 @@ assert.deepEqual(remixThemes.map((t: any) => t.id), members('power-level').map((
 assert.equal(remixes.flatMap((r: any) => C.generateFamilyThemes(r)).flatMap((t: any) => auditTheme(t).filter((x: any) => !x.pass)).length, 0); ok('remix: every remix passes the audit');
 assert.ok(R.remixFamily(C.BUILTIN_FAMILIES[0], 1)!.generator!.signature === undefined); ok('remix: a Tailwind-only family stays Tailwind-only');
 assert.equal(R.remixFamily({ id: 'x', name: 'X' }, 1), null); ok('remix: a family without a generator cannot be remixed');
+
+// manifest.json: Nimbalyst parses it with JSON.parse and drops the extension when that throws (0.7.1 shipped a raw line break in the changelog)
+const manifest = JSON.parse(readFileSync('manifest.json', 'utf8'));
+assert.equal(manifest.id, 'com.fireworklabs.theme-editor'); assert.equal(manifest.version, JSON.parse(readFileSync('package.json', 'utf8')).version); ok('manifest.json is strict JSON, keeps the upstream id, matches package.json version');
 console.log(`\n${n} passed`);
